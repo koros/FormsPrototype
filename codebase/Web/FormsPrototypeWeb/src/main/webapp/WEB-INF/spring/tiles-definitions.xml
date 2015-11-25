@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+       "-//Apache Software Foundation//DTD Tiles Configuration 2.0//EN"
+       "http://tiles.apache.org/dtds/tiles-config_2_0.dtd">
+<tiles-definitions>
+	
+	<!--
+		We declare a new template named template-main.
+		This template is used for displaying the main page.
+		It has 4 attributes. These attributes are placeholder for our contents
+		For each attribute, we have assigned a corresponding JSP
+	-->
+	<definition name="template-main" template="/WEB-INF/views/jsp/layouts/main.jsp">
+		<put-attribute name="header-content" value="/WEB-INF/views/jsp/sections/header.jsp" />
+		<put-attribute name="navigation-content" value="/WEB-INF/views/jsp/sections/nav.jsp" />
+		<put-attribute name="primary-content" value="" />
+		<put-attribute name="footer-content" value="/WEB-INF/views/jsp/sections/footer.jsp" />
+		<put-attribute name="includes-bottom-content" value="/WEB-INF/views/jsp/sections/includes-bottom.jsp" /> 
+	</definition>
+	
+	<definition name="plain-template-main" template="/WEB-INF/views/jsp/layouts/main.jsp">
+		<put-attribute name="header-content" value="" />
+		<put-attribute name="navigation-content" value="" />
+		<put-attribute name="primary-content" value="" />
+		<put-attribute name="footer-content" value="" />
+		<put-attribute name="includes-bottom-content" value="" /> 
+	</definition>
+	
+	<!-- Concrete page. To use this page, your controller must return the name "adminHome-tiles" -->
+	<definition name="adminHome-tiles" extends="template-main">
+		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/dashboard.jsp" />
+	</definition>
+	
+	<!-- Concrete page. To use this page, your controller must return the name "formsList-tiles" -->
+	<definition name="formsList-tiles" extends="template-main">
+		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/listForms.jsp" />
+	</definition>
+	
+	<!-- Concrete page. To use this page, your controller must return the name "addForm-tiles" -->
+	<definition name="addForm-tiles" extends="template-main">
+		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/addForm.jsp" />
+	</definition>
+	
+	<!-- Concrete page. To use this page, your controller must return the name "addForm-success-tiles" -->
+	<definition name="addForm-success-tiles" extends="template-main">
+		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/formSavedSuccess.jsp" />
+	</definition>
+	
+	<!-- Concrete page. To use this page, your controller must return the name "addForm-success-tiles" -->
+	<definition name="editForm-tiles" extends="template-main">
+		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/editForm.jsp" />
+	</definition>
+	
+	<!-- Concrete page. To use this page, your controller must return the name "addForm-success-tiles" -->
+	<definition name="webhook-tiles" extends="template-main">
+		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/webhook.jsp" />
+	</definition>
+	
+	
+</tiles-definitions>
