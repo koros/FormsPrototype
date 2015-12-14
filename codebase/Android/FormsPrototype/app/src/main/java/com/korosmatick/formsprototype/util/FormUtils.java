@@ -13,6 +13,7 @@ import com.korosmatick.formsprototype.database.MySQLiteHelper;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.XML;
+import org.w3c.dom.Node;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ public class FormUtils {
     Context ctx;
     MySQLiteHelper mySQLiteHelper;
 
+    private static final String CONTENT_FIELD = "content";
 
     public FormUtils(Context context){
         ctx = context;
@@ -43,44 +45,54 @@ public class FormUtils {
         return instance;
     }
 
-    public long saveFormData(String formData) throws Exception {
+    public long saveFormData(String xml) throws Exception {
         Long id = null;
-        JSONObject json = XML.toJSONObject(formData);
+        JSONObject json = XML.toJSONObject(xml);
         System.out.println(json);
         Iterator<?> keys = json.keys();
         while( keys.hasNext() ) {
             String key = (String)keys.next();
             if (json.get(key) instanceof JSONObject) {
                 JSONObject object = json.getJSONObject(key);
-                id = saveJsonObjectFields(object, key, null, null);
-
-                // Save the form submission record, useful while reconstructing the form later during edit, and syncing
-//                if (id != null){
-//                    String encounter_type = object.has("encounter_type") ? object.getString("encounter_type") : null;
-//                    String form_id = object.has("id") ? object.getString("id") : null;
-//                    Long version = json.has("version") ? object.getLong("version") : null;
-//                    String table_name = key;
-//                    Long data_id = id;
-//                    String form_data = formData;
-//                    saveFormSubmissionData(encounter_type, form_id, table_name, data_id, form_data);
-//                }
+                String tableName = retrieveTableNameOrColForField(key);
+                if (mySQLiteHelper.tableExists(tableName)){
+                    id = saveJsonObjectFields(object, tableName, null, null);
+                    if (id != null){
+                        //create an insert ref in the sync table
+                        createNewRecordInsertRecordInSyncTable(id, tableName);
+                    }
+                }
             }
         }
 
         return id;
     }
 
+    public void createNewRecordInsertRecordInSyncTable(Long record_id,  String tableName){
+        try {
+            //sync_table (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, table TEXT NOT NULL, record_id INTEGER NOT NULL, type TEXT NOT NULL, column TEXT NULL)
+            // get reference to writable DB
+            SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+            ContentValues values = new ContentValues();
+            values.put("table_name", tableName);
+            values.put("record_id", record_id);
+            values.put("type", "insert");
+            Long id = db.insertWithOnConflict("sync_table", BaseColumns._ID, values, SQLiteDatabase.CONFLICT_REPLACE);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public String retrieveTableNameOrColForField(String field){
+        //replace all illegal xters in the table name
+        return "_" + field.toLowerCase().replaceAll("[^A-Za-z0-9_]", "_");
+    }
+
     public Long saveJsonObjectFields(JSONObject jsonObject, String tableName, String foreignIdFieldName, Long foreignId){
         try {
             ContentValues values = new ContentValues();
-            Map<String, String> alterTableSqlStatements = new HashMap<String, String>(); // alter table sql statements if necessary
-            StringBuilder createTableSql = new StringBuilder("create table if not exists " + tableName + "(_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT");
-
             if (foreignIdFieldName != null && foreignId != null) {
-                createTableSql.append(", " + foreignIdFieldName + " INTEGER NULL"); // Same table could be linking to multiple parents hence, we should allow null
                 values.put(foreignIdFieldName, foreignId);
-                String alterStmt = "alter table " + tableName + " add column " + foreignIdFieldName + " INTEGER NULL";
-                alterTableSqlStatements.put(foreignIdFieldName, alterStmt);
             }
 
             List<String> fields = new ArrayList<String>();
@@ -94,60 +106,42 @@ public class FormUtils {
 			 * generate create table & insert sql statement
 			 */
             for(String field : fields) {
-                createTableSql.append(", " + field + " TEXT NULL"); // let all the fields be varchar
-                String alterStmt = "alter table " + tableName + " add column " + field + " TEXT NULL";
-                alterTableSqlStatements.put(field, alterStmt);
-
                 if (jsonObject.get(field) instanceof JSONObject) {
-                    //create a relationship reference in the form submissions
-                    String parent_table = tableName;
-                    String child_table = field;
-                    createOrUpdateTableRelationshipLink(parent_table, child_table, field, "one_to_one", field, "_id");
-                    values.put(field, "FETCH_OBJECT");
-                }else if(jsonObject.get(field) instanceof JSONArray) {
-                    JSONArray array = jsonObject.getJSONArray(field);
-                    if (isArrayOfObjects(array)){
-                        //create a relationship reference in the form submissions
-                        String parent_table = tableName;
-                        String child_table = field;
-                        createOrUpdateTableRelationshipLink(parent_table, child_table, field, "one_to_many", field, "_id");
-                        values.put(field, "FETCH_OBJECT");
-                    }else {
-                        values.put(field, array.get(0).toString());
+                    JSONObject object = jsonObject.getJSONObject(field);
+                    String columnName = retrieveTableNameOrColForField(field);
+                    if (object.has(CONTENT_FIELD) && mySQLiteHelper.tableContainsColumn(tableName, columnName)){
+                        values.put(columnName, object.getString(CONTENT_FIELD));
                     }
-                }else {
-                    values.put(field, jsonObject.get(field).toString());
                 }
             }
-
-            createTableSql.append(");");
-            executeCreateTableIfNotExistStatement(createTableSql.toString());
-            executeAlterTableStatementsIfNecessarry(tableName, alterTableSqlStatements);
 
 			/*
 			 * generate the id for this record and fetch/create child records
 			 */
             Long id = executeInsertStatement(values, tableName);
-            for(String field : fields) {
-                if (jsonObject.get(field) instanceof JSONObject) {
-                    //concat the table name and field to get the name of the child table
-                    Long childRecordId = saveJsonObjectFields(jsonObject.getJSONObject(field), field, tableName, id);
-                    String updateSql = "update " + tableName + " set " + field  + " = " + childRecordId + " where _id=" + id;
-                    executeSQL(updateSql);
 
+            for(String field : fields) {
+                String childTableName = retrieveTableNameOrColForField(field);
+                if (jsonObject.get(field) instanceof JSONObject) {
+                    JSONObject object = jsonObject.getJSONObject(field);
+                    if (mySQLiteHelper.tableExists(childTableName)){
+                        Long childRecordId = saveJsonObjectFields(object, childTableName, tableName, id);
+                        String updateSql = "update " + tableName + " set " + childTableName  + " = " + childRecordId + " where _id=" + id;
+                        executeSQL(updateSql);
+                    }
                 }else if(jsonObject.get(field) instanceof JSONArray) {
                     JSONArray array = jsonObject.getJSONArray(field);
                     if (isArrayOfObjects(array)){
-                        values.put(field, "FETCH_OBJECT");
                         for (int i = 0; i < array.length(); i++) {
                             if (array.get(i) instanceof JSONObject) {
-                                //concat the table name and field to get the name of the child table
-                                saveJsonObjectFields(array.getJSONObject(i), field, tableName, id);
+                                JSONObject object = array.getJSONObject(i);
+                                if (mySQLiteHelper.tableExists(childTableName)){
+                                    Long childRecordId = saveJsonObjectFields(object, childTableName, tableName, id);
+                                    String updateSql = "update " + tableName + " set " + childTableName  + " = " + childRecordId + " where _id=" + id;
+                                    executeSQL(updateSql);
+                                }
                             }
                         }
-                    }
-                    else {
-                        values.put(field, array.get(0).toString());//hack for the version String
                     }
                 }
             }
@@ -160,6 +154,14 @@ public class FormUtils {
         }
 
         return null;
+    }
+
+    private void addColumnValueForTable(String value, String columnName, String tableName, ContentValues values){
+        tableName = retrieveTableNameOrColForField(tableName);
+        columnName = retrieveTableNameOrColForField(columnName);
+        if (mySQLiteHelper.tableExists(tableName) && mySQLiteHelper.tableContainsColumn(tableName, columnName)){
+            values.put(columnName, value);
+        }
     }
 
     @TargetApi(Build.VERSION_CODES.HONEYCOMB) // needs refactoring not sound at the moment
@@ -210,42 +212,6 @@ public class FormUtils {
         return id;
     }
 
-//    public Long saveFormSubmissionData(String encounter_type, String form_id, String table_name, Long data_id, String form_data){
-//        ContentValues values = new ContentValues();
-//        values.put("encounter_type", encounter_type);
-//        values.put("form_id", form_id);
-//        values.put("table_name", table_name);
-//        values.put("data_id", data_id);
-//        values.put("form_data", form_data);
-//
-//        SQLiteDatabase database = mySQLiteHelper.getWritableDatabase();
-//        Long id = database.insertWithOnConflict("form_submissions", BaseColumns._ID, values, SQLiteDatabase.CONFLICT_REPLACE);
-//        return id;
-//    }
-
-    /*
-     * Create the table if it doesn't exist
-     */
-    private void executeCreateTableIfNotExistStatement(String createTableSql) {
-        // TODO Auto-generated method stub
-        SQLiteDatabase database = mySQLiteHelper.getWritableDatabase();
-        database.execSQL(createTableSql);
-    }
-
-    private void executeAlterTableStatementsIfNecessarry(String tableName, Map<String, String> alterTableSqlStatements){
-        Set<String> keys = alterTableSqlStatements.keySet();
-        SQLiteDatabase database = mySQLiteHelper.getWritableDatabase();
-        for(String key : keys){
-            String columnName = key;
-            String alterTableSql = alterTableSqlStatements.get(key);
-            if (!mySQLiteHelper.tableContainsColumn(tableName, columnName)){
-                try{
-                    database.execSQL(alterTableSql);
-                }
-                catch (Exception doNothing){ /*col already exists*/ }
-            }
-        }
-    }
 
     public void createOrUpdateTableRelationshipLink(String parent_table, String child_table, String field, String kind, String from, String to){
         String query = "SELECT  * FROM entity_relationships WHERE parent_table = \"" + parent_table + "\" AND child_table = \"" + child_table +"\" AND field=\"" + field +"\" AND from_field=\"" +

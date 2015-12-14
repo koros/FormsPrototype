@@ -6,6 +6,7 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -17,6 +18,7 @@ import android.widget.TextView;
 
 import com.korosmatick.formsprototype.R;
 import com.korosmatick.formsprototype.database.MySQLiteHelper;
+import com.korosmatick.formsprototype.util.SyncManager;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
@@ -24,16 +26,17 @@ import butterknife.ButterKnife;
 /**
  * Created by koros on 11/23/15.
  */
-public class PreviewDataFragment extends Fragment {
+public class PreviewDataFragment extends Fragment implements SwipeRefreshLayout.OnRefreshListener {
 
-    @Bind(R.id.tableLayout1)
-    TableLayout tableLayout;
+    @Bind(R.id.tableLayout1) TableLayout tableLayout;
 
     String tableName = null;
     String[] columnNames = new String[]{};
     LayoutInflater layoutInflater;
 
     MySQLiteHelper mySQLiteHelper;
+
+    @Bind(R.id.swipe_refresh_layout) SwipeRefreshLayout swipeRefreshLayout;
 
     public void setTableName(String tableName){
         this.tableName = tableName;
@@ -45,6 +48,8 @@ public class PreviewDataFragment extends Fragment {
         layoutInflater = inflater;
         View view = inflater.inflate(R.layout.preview_data_fragment, container, false);
         ButterKnife.bind(this, view);
+
+        swipeRefreshLayout.setOnRefreshListener(this);
 
         mySQLiteHelper = MySQLiteHelper.getInstance(getActivity());
         columnNames = mySQLiteHelper.getColumnNamesForTable(tableName);
@@ -116,7 +121,7 @@ public class PreviewDataFragment extends Fragment {
         textView.setGravity(Gravity.CENTER_HORIZONTAL);
         setMargins(textView, 1);
         textView.setPadding(5, 5, 5, 5);
-        textView.setBackgroundColor(Color.WHITE);
+        textView.setBackgroundColor(Color.GRAY);
         textView.setTypeface(Typeface.SERIF, Typeface.BOLD);
         return textView;
     }
@@ -144,7 +149,7 @@ public class PreviewDataFragment extends Fragment {
         textView.setText(text);
         setMargins(textView, 1);
         textView.setGravity(Gravity.CENTER_HORIZONTAL);
-        textView.setBackgroundColor(row % 2 == 0 ? Color.GRAY : Color.WHITE);
+        textView.setBackgroundColor(row % 2 == 0 ? Color.LTGRAY : Color.WHITE);
         return textView;
 
     }
@@ -158,5 +163,37 @@ public class PreviewDataFragment extends Fragment {
         TableRow.LayoutParams params = new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT, Gravity.RIGHT);
         params.setMargins(margin, margin, margin, margin);
         view.setLayoutParams(params);
+    }
+
+    /**
+     * This method is called when swipe refresh is pulled down
+     */
+    @Override
+    public void onRefresh() {
+        // perform sync
+        // showing refresh animation before making http call
+        showSyncProgress(true);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    SyncManager syncManager = SyncManager.getInstance(getActivity().getApplicationContext());
+                    syncManager.retrieveUnsyncedRows();
+                    Thread.sleep(2000);
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
+                showSyncProgress(false);
+            }
+        }).start();
+    }
+
+    private void showSyncProgress(final boolean status){
+        swipeRefreshLayout.post(new Runnable() {
+            @Override
+            public void run() {
+                swipeRefreshLayout.setRefreshing(status);
+            }
+        });
     }
 }

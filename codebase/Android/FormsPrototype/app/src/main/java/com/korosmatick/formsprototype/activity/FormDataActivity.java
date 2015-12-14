@@ -3,10 +3,12 @@ package com.korosmatick.formsprototype.activity;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -25,7 +27,7 @@ import butterknife.ButterKnife;
 /**
  * Created by koros on 11/23/15.
  */
-public class FormDataActivity extends ActionBarActivity {
+public class FormDataActivity extends AppCompatActivity {
 
     @Bind(R.id.view_pager) SampleViewPager mPager;
     private FragmentPagerAdapter mPagerAdapter;
@@ -109,22 +111,27 @@ public class FormDataActivity extends ActionBarActivity {
             }
         });
 
-        PreviewDataFragment previewDataFragment = (PreviewDataFragment) findFragmentByPosition(0);
-        DisplayFormFragment formFragment = (DisplayFormFragment) findFragmentByPosition(formIndex);
-        if (previewDataFragment != null && data != null) {
-            FormUtils formUtils = FormUtils.getInstance(getApplicationContext());
-            //formUtils.saveFormData();
-            previewDataFragment.refreshListView();
-        }
+        try {
+            PreviewDataFragment previewDataFragment = (PreviewDataFragment) findFragmentByPosition(0);
+            DisplayFormFragment formFragment = (DisplayFormFragment) findFragmentByPosition(formIndex);
+            if (previewDataFragment != null && data != null) {
+                FormUtils formUtils = FormUtils.getInstance(getApplicationContext());
+                formUtils.saveFormData(data);
+                previewDataFragment.refreshListView();
+            }
 
-        //hack reset the form
-        DisplayFormFragment displayFormFragment = (DisplayFormFragment) findFragmentByPosition(formIndex);
-        if (displayFormFragment != null) {
-            displayFormFragment.setFormData(null);
-            displayFormFragment.loadFormData();
-        }
+            //hack reset the form
+            DisplayFormFragment displayFormFragment = (DisplayFormFragment) findFragmentByPosition(formIndex);
+            if (displayFormFragment != null) {
+                displayFormFragment.setFormData(null);
+                displayFormFragment.loadFormData();
+            }
 
-        formFragment.setRecordId(null);
+            formFragment.setRecordId(null);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     public class SampleFragmentPagerAdapter extends FragmentPagerAdapter {

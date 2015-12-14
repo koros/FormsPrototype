@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ListView;
@@ -24,7 +25,7 @@ import butterknife.OnItemClick;
 /**
  * Created by koros on 11/23/15.
  */
-public class HomeActivity extends ActionBarActivity {
+public class HomeActivity extends AppCompatActivity {
 
     @Bind(R.id.listView)
     ListView listView;
@@ -32,7 +33,8 @@ public class HomeActivity extends ActionBarActivity {
     FormsListAdapter adapter;
     List<Form> items = new ArrayList<Form>();
     MySQLiteHelper mySQLiteHelper = null;
-    String formsEndpoint = "http://10.20.20.13:8080/sample/rest/forms";
+    // 10.0.2.2 - localhost
+    String formsEndpoint = "http://10.0.2.2:8080/sample/rest/forms";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

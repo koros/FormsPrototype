@@ -11,6 +11,9 @@ import android.util.Log;
 
 import com.korosmatick.formsprototype.model.Form;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -22,6 +25,7 @@ import java.util.Map;
  */
 public class MySQLiteHelper extends SQLiteOpenHelper {
 
+    private static final String TAG = "MySQLiteHelper";
     // Database Version
     private static final int DATABASE_VERSION = 1;
 
@@ -35,6 +39,10 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
     private static final String CREATE_FORMS_TABLE_SQL = "CREATE TABLE forms (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  formVersion TEXT NOT NULL, tableName TEXT NOT NULL, formName TEXT NOT NULL, formId TEXT NULL, modelNode TEXT NOT NULL, formNode TEXT NOT NULL, formUrl TEXT NOT NULL)";
 
     private static final String CREATE_FOREIGN_KEYS_TABLE_SQL = "CREATE TABLE entity_relationships (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  parent_table TEXT NOT NULL,  child_table TEXT NOT NULL, field TEXT NOT NULL, kind TEXT NOT NULL, from_field TEXT NOT NULL, to_field TEXT NOT NULL)";
+
+    private static final String CREATE_SYNC_TABLE_SQL = "CREATE TABLE sync_table (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, table_name TEXT NOT NULL, record_id INTEGER NOT NULL, type TEXT NOT NULL, column TEXT NULL)";
+
+    private static final String CREATE_SYNC_POINTER_TABLE_SQL = "CREATE TABLE sync_pointer (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  pointer_name TEXT NOT NULL UNIQUE,  position INTEGER NOT NULL)";
 
     static MySQLiteHelper instance;
 
@@ -55,6 +63,8 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
         //create the table that holds the form submissions in form of xml data
         db.execSQL(CREATE_FORMS_TABLE_SQL);
         db.execSQL(CREATE_FOREIGN_KEYS_TABLE_SQL);
+        db.execSQL(CREATE_SYNC_TABLE_SQL);
+        db.execSQL(CREATE_SYNC_POINTER_TABLE_SQL);
     }
 
     @Override
@@ -278,4 +288,22 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
         }
         return null;
     }
+
+    public JSONObject sqliteRowToJson(Cursor cursor) {
+        int totalColumn = cursor.getColumnCount();
+        JSONObject rowObject = new JSONObject();
+        if (cursor != null && cursor.moveToFirst()){
+            for (int i = 0; i < totalColumn; i++) {
+                if (cursor.getColumnName(i) != null) {
+                    try {
+                        rowObject.put(cursor.getColumnName(i), cursor.getString(i));
+                    } catch (Exception e) {
+                        Log.d(TAG, e.getMessage());
+                    }
+                }
+            }
+        }
+        return rowObject;
+    }
+
 }

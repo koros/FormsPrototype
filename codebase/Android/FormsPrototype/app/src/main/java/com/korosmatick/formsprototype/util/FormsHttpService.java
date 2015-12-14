@@ -1,6 +1,10 @@
 package com.korosmatick.formsprototype.util;
 
+import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.provider.BaseColumns;
 import android.util.Log;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -71,10 +75,9 @@ public class FormsHttpService {
                 // Execute HTTP Post Request
                 response = httpclient.execute(httppost);
 
-                Log.d("",
-                        "\n----------------------------------------------------------------\n"
-                                + httppost.getURI().toString() +
-                                "\n----------------------------------------------------------------\n");
+                Log.d("", "\n----------------------------------------------------------------\n");
+                Log.d("", httppost.getURI().toString());
+                Log.d("", "\n----------------------------------------------------------------\n");
 
                 InputStream stream = response.getEntity().getContent();
                 //stream = new GZIPInputStream(stream);
@@ -194,6 +197,9 @@ public class FormsHttpService {
             createTableSql.append(", " + foreignIdFieldName  + " INTEGER DEFAULT NULL"); // Same table could be linking to multiple parents hence, we should allow null
             String alterStmt = "alter table " + tableName + " add column " + foreignIdFieldName + " INTEGER DEFAULT NULL";
             alterTableSqlStatements.put(foreignIdFieldName, alterStmt);
+
+            // add a link to relatioship table
+            createOrUpdateTableRelationshipLink(foreignIdFieldName, tableName, foreignIdFieldName, "one_to_many", foreignIdFieldName, "_id");
         }
 
         NodeList nodeList = node.getChildNodes();
@@ -257,5 +263,33 @@ public class FormsHttpService {
             }
         }
         return false;
+    }
+
+    public void createOrUpdateTableRelationshipLink(String parent_table, String child_table, String field, String kind, String from, String to){
+        String query = "SELECT  * FROM entity_relationships WHERE parent_table = \"" + parent_table + "\" AND child_table = \"" + child_table +"\" AND field=\"" + field +"\" AND from_field=\"" +
+                from + "\" AND to_field=\"" + to + "\"";
+        SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+        Cursor cursor = db.rawQuery(query, null);
+
+        if (cursor.moveToFirst()) {
+            Long id = cursor.getLong(cursor.getColumnIndex("_id"));
+            //update the relationship kind if necessary
+            String currentRelationship = cursor.getString(cursor.getColumnIndex("kind"));
+            if (currentRelationship.equalsIgnoreCase("one_to_one") && kind.equalsIgnoreCase("one_to_many")){
+                String updateSql = "update entity_relationships set kind=\"" + kind + "\" where _id=" +id;
+                db.execSQL(updateSql);
+            }
+
+        } else { // the relationship doesn't exist insert a new record to the database
+            ContentValues values = new ContentValues();
+            values.put("parent_table", parent_table);
+            values.put("child_table", child_table);
+            values.put("kind", kind);
+            values.put("field", field);
+            values.put("from_field", from);
+            values.put("to_field", to);
+
+            Long id = db.insertWithOnConflict("entity_relationships", BaseColumns._ID, values, SQLiteDatabase.CONFLICT_REPLACE);
+        }
     }
 }

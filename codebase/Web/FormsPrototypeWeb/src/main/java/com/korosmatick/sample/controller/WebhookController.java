@@ -1,6 +1,5 @@
 package com.korosmatick.sample.controller;
 
-import java.text.DateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
@@ -39,11 +38,7 @@ public class WebhookController {
 		
 		RequestsLogs logs = new RequestsLogs();
 		logs.setAllRequestParams(allRequestParams.toString());
-		
-		Date date = new Date();
-		DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, locale);
-		String formattedDate = dateFormat.format(date);
-		logs.setTime(formattedDate);
+		logs.setTime(new Date().toString());
 		//requestsLogsDao.add(logs);
 		
 		model.addAttribute("requestsLogs", requestsLogsDao.findAll());

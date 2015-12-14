@@ -27,7 +27,7 @@
 	<beans:import resource="hibernate-context.xml"/>
 	
 	<!-- Load Mongodb related configuration -->
-	<beans:import resource="mongodb-context.xml"/>
+	<!-- <beans:import resource="mongodb-context.xml"/> -->
 	
 	<!-- Load Hibernate related configuration -->
 	<beans:import resource="task-context.xml"/>

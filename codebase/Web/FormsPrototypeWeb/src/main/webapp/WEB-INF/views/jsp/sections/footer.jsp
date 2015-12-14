@@ -7,7 +7,7 @@
 	          
 	          <div class="nav-collapse collapse">
 	            <p class="navbar-text">
-	              &copy;copyright korosync 2013
+	              &copy;copyright korosync 2015
 	            </p>
 	            
 	          </div><!--/.nav-collapse -->

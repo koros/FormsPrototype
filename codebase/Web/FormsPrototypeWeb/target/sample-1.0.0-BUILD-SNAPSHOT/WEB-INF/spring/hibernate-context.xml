@@ -40,6 +40,10 @@
 	<!-- Declare a transaction manager-->
 	<bean id="transactionManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager" 
        			p:sessionFactory-ref="sessionFactory" />
+       			
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+	  <constructor-arg ref="dataSource"/>
+	</bean>
 	
     
 </beans>

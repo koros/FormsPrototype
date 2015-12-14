@@ -58,6 +58,8 @@
 		<c:url var="formsUrl" value="/prototype/forms" />
         <c:url var="addFormUrl" value="/prototype/addForm" />
         <c:url var="rapidproWebhookTestUrl" value="/prototype/webhook" />
+        <c:url var="rapidproAddContactUrl" value="/prototype/rapidpro/addContact" />
+        <c:url var="rapidproContactsUrl" value="/prototype/rapidpro/contacts" />
 		
 		<div id="example" class="collapse navbar-collapse">
 	      <ul class="nav navbar-nav navbar-right">
@@ -67,18 +69,31 @@
 	                    Forms
 	                </a>
 	            </li>
-	             <li>
+	            <li>
 	                <a href="${addFormUrl}"> 
 	                    <i class="fa fa-twitter"></i>
-	                    Add New Form
+	                    Add Form
 	                </a>
 	            </li>
-	              <li>
+	            <li>
+	                <a href="${rapidproContactsUrl}"> 
+	                    <i class="fa fa-pinterest"></i>
+	                    Contacts
+	                </a>
+	            </li>
+	            <li>
+	                <a href="${rapidproAddContactUrl}"> 
+	                    <i class="fa fa-pinterest"></i>
+	                    Add Contact
+	                </a>
+	            </li>
+	            <li>
 	                <a href="${rapidproWebhookTestUrl}"> 
 	                    <i class="fa fa-pinterest"></i>
-	                    Test Rapidpro Webhook
+	                    Webhook
 	                </a>
 	            </li>
+	            
 	       </ul>
 	      
 	    </div><!-- /.navbar-collapse -->

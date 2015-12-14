@@ -56,5 +56,21 @@
 		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/webhook.jsp" />
 	</definition>
 	
+	<!-- Concrete page. To use this page, your controller must return the name "rapidproContacts-tiles" -->
+	<definition name="rapidproContacts-tiles" extends="template-main">
+		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/rapidproContacts.jsp" />
+	</definition>
+	
+	<!-- Concrete page. To use this page, your controller must return the name "rapidproAddContact-tiles" -->
+	<definition name="rapidproAddContact-tiles" extends="template-main">
+		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/rapidproAddContact.jsp" />
+	</definition>
+	
+	
+	<!-- Concrete page. To use this page, your controller must return the name "startFlowStatus-tiles" -->
+	<definition name="startFlowStatus-tiles" extends="template-main">
+		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/startFlowStatus.jsp" />
+	</definition>
+	
 	
 </tiles-definitions>

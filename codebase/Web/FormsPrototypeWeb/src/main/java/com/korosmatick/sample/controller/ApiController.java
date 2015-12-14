@@ -1,6 +1,5 @@
 package com.korosmatick.sample.controller;
 
-import java.text.DateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
@@ -51,14 +50,8 @@ public class ApiController {
 		
 		RequestsLogs logs = new RequestsLogs();
 		logs.setAllRequestParams(allRequestParams.toString());
-		
-		Date date = new Date();
-		DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, locale);
-		String formattedDate = dateFormat.format(date);
-		logs.setTime(formattedDate);
+		logs.setTime(new Date().toString());
 		requestsLogsDao.add(logs);
-		
-		
 		
 		return new HashMap<String, Object>();
 	}
@@ -67,13 +60,10 @@ public class ApiController {
 	public @ResponseBody Map<String, Object> rapidProHookMotherId(@RequestParam Map<String,String> allRequestParams, Locale locale, @RequestParam(value = "motherId") Long motherId) {
 		
 		Map<String, Object> dummyResponse= new HashMap<String, Object>();
+		
 		RequestsLogs logs = new RequestsLogs();
 		logs.setAllRequestParams(allRequestParams.toString());
-		
-		Date date = new Date();
-		DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, locale);
-		String formattedDate = dateFormat.format(date);
-		logs.setTime(formattedDate);
+		logs.setTime(new Date().toString());
 		requestsLogsDao.add(logs);
 		
 		Long serverSideDummyId = null;
@@ -93,13 +83,10 @@ public class ApiController {
 	public @ResponseBody Map<String, Object> rapidProHookClinic(@RequestParam Map<String,String> allRequestParams, Locale locale, @RequestParam(value = "clinicName") String clinicName) {
 		
 		Map<String, Object> dummyResponse= new HashMap<String, Object>();
+		
 		RequestsLogs logs = new RequestsLogs();
 		logs.setAllRequestParams(allRequestParams.toString());
-		
-		Date date = new Date();
-		DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, locale);
-		String formattedDate = dateFormat.format(date);
-		logs.setTime(formattedDate);
+		logs.setTime(new Date().toString());
 		requestsLogsDao.add(logs);
 		
 		dummyResponse.put("clinicName", clinicName);

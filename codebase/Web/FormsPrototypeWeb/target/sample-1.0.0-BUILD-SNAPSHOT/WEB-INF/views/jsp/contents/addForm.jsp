@@ -10,7 +10,7 @@
 
 <!-- Text input-->
 <div class="form-group">
-  <label class="col-md-4 control-label" for="name">Name</label>  
+  <label class="col-md-4 control-label" for="formName">Name</label>  
   <div class="col-md-4">
   <form:input id="formName" path="formName" name="formName" placeholder="Name" class="form-control input-md" required="" type="text" />
   </div>
@@ -18,7 +18,7 @@
 
 <!-- Text input-->
 <div class="form-group">
-  <label class="col-md-4 control-label" for="country">URL</label>  
+  <label class="col-md-4 control-label" for="formUrl">URL</label>  
   <div class="col-md-4">
   <form:input id="formUrl" path="formUrl" name="formUrl" placeholder="http://sample.com" class="form-control input-md" type="text" />
   </div>
