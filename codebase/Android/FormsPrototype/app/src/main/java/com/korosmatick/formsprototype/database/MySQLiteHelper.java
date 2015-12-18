@@ -289,9 +289,9 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
         return null;
     }
 
-    public JSONObject sqliteRowToJson(Cursor cursor) {
+    public Map<String, String> sqliteRowToMap(Cursor cursor) {
         int totalColumn = cursor.getColumnCount();
-        JSONObject rowObject = new JSONObject();
+        Map<String, String> rowObject = new HashMap<String, String>();
         if (cursor != null && cursor.moveToFirst()){
             for (int i = 0; i < totalColumn; i++) {
                 if (cursor.getColumnName(i) != null) {

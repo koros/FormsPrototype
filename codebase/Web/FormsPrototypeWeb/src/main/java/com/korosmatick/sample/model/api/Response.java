@@ -11,9 +11,11 @@ public class Response {
 	
 	private double version = 1.0;
 	private String status;
-	private String error;
+	private List<Error> errors;
 	
 	private List<Form> forms;
+	
+	private SyncResponse syncResponse;
 	
 	public double getVersion() {
 		return version;
@@ -31,12 +33,12 @@ public class Response {
 		this.status = status;
 	}
 	
-	public String getError() {
-		return error;
+	public List<Error> getErrors() {
+		return errors;
 	}
 
-	public void setError(String error) {
-		this.error = error;
+	public void setErrors(List<Error> errors) {
+		this.errors = errors;
 	}
 
 	public List<Form> getForms() {
@@ -45,6 +47,14 @@ public class Response {
 
 	public void setForms(List<Form> forms) {
 		this.forms = forms;
+	}
+
+	public SyncResponse getSyncResponse() {
+		return syncResponse;
+	}
+
+	public void setSyncResponse(SyncResponse syncResponse) {
+		this.syncResponse = syncResponse;
 	}
 	
 }

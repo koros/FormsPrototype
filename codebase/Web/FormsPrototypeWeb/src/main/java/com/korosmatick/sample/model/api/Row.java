@@ -1,18 +1,12 @@
-package com.korosmatick.formsprototype.model;
-
-import com.google.gson.annotations.SerializedName;
-
-import org.json.JSONObject;
+package com.korosmatick.sample.model.api;
 
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created by koros on 11/29/15.
- */
-public class Row {
+import org.json.JSONObject;
 
-    String tableName;
+public class Row {
+	String tableName;
     Map<String, String> row; //column:value values
     List<Row> childRows;
 

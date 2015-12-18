@@ -2,6 +2,7 @@ package com.korosmatick.sample.model.db;
 
 import java.io.Serializable;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
@@ -17,6 +18,7 @@ public class RequestsLogs implements Serializable {
 	
 	private String time;
 	
+	@Column(columnDefinition = "TEXT")
 	private String allRequestParams;
 	
 	public Long getId() {

@@ -1,8 +1,6 @@
 package com.korosmatick.sample.controller;
 
-import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -23,12 +21,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.korosmatick.sample.dao.ContactDao;
 import com.korosmatick.sample.dao.RequestsLogsDao;
 import com.korosmatick.sample.model.db.Contact;
-import com.korosmatick.sample.model.db.Form;
-import com.korosmatick.sample.model.db.RequestsLogs;
 import com.korosmatick.sample.service.RapidproService;
 
 @Controller
-public class RapidproContactsController {
+public class RapidproContactsController extends BaseController {
 
 	private static final Logger logger = LoggerFactory.getLogger(RapidproContactsController.class);
 	
@@ -45,10 +41,7 @@ public class RapidproContactsController {
 	public String rapidproContacts(Locale locale, Model model, @RequestParam Map<String,String> allRequestParams) {
 		logger.info("Welcome Admin home! The client locale is {}.", locale);
 		
-		RequestsLogs logs = new RequestsLogs();
-		logs.setAllRequestParams(allRequestParams.toString());
-		logs.setTime(new Date().toString());
-		//requestsLogsDao.add(logs);
+		logRequest(allRequestParams);
 		
 		model.addAttribute("contacts", contactDao.findAll());
 		return "rapidproContacts-tiles";
@@ -58,10 +51,7 @@ public class RapidproContactsController {
 	public String rapidproAddContact(Locale locale, Model model, @RequestParam Map<String,String> allRequestParams) {
 		logger.info("Welcome Admin home! The client locale is {}.", locale);
 		
-		RequestsLogs logs = new RequestsLogs();
-		logs.setAllRequestParams(allRequestParams.toString());
-		logs.setTime(new Date().toString());
-		//requestsLogsDao.add(logs);
+		logRequest(allRequestParams);
 		
 		model.addAttribute("contact", new Contact());
 		return "rapidproAddContact-tiles";
@@ -71,10 +61,7 @@ public class RapidproContactsController {
 	public String rapidproAddContactAction(Locale locale, Model model, @ModelAttribute Contact contact, @RequestParam Map<String,String> allRequestParams) {
 		logger.info("Welcome Admin home! The client locale is {}.", locale);
 		
-		RequestsLogs logs = new RequestsLogs();
-		logs.setAllRequestParams(allRequestParams.toString());
-		logs.setTime(new Date().toString());
-		//requestsLogsDao.add(logs);
+		logRequest(allRequestParams);
 		
 		JSONArray urns = new JSONArray();
 		String tel = "tel:".concat(contact.getPhone());
@@ -91,14 +78,10 @@ public class RapidproContactsController {
 	@RequestMapping(value = "/prototype/rapidpro/runSampleAncFlow/{id}")
 	public String runSampleAncFlow(@PathVariable("id") String id, Locale locale, Model model, @RequestParam Map<String,String> allRequestParams) {
 		logger.info("============== runSampleAncFlow ==============");
-        try
-        {
+        try{
         	Contact contact = contactDao.findById(Long.valueOf(id));
         	
-        	RequestsLogs logs = new RequestsLogs();
-    		logs.setAllRequestParams(allRequestParams.toString());
-    		logs.setTime(new Date().toString());
-    		//requestsLogsDao.add(logs);
+        	logRequest(allRequestParams);
     		
     		String flow_uuid = "8adbace9-1824-4a17-880c-a97629d2b2ae"; // sample ANC flow hard coded for now
 			List<String> contacts = new ArrayList<String>();
@@ -108,8 +91,7 @@ public class RapidproContactsController {
         	model.addAttribute("status", status);
         	return "startFlowStatus-tiles";
         }
-        catch(Exception e)
-        {
+        catch(Exception e){
             return null;
         }
 	}

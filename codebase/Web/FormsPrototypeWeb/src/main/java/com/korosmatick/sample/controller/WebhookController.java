@@ -1,6 +1,5 @@
 package com.korosmatick.sample.controller;
 
-import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
 
@@ -14,12 +13,11 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.korosmatick.sample.dao.RequestsLogsDao;
-import com.korosmatick.sample.model.db.RequestsLogs;
 import com.korosmatick.sample.service.FormService;
 import com.korosmatick.sample.service.HttpService;
 
 @Controller
-public class WebhookController {
+public class WebhookController extends BaseController{
 
 	private static final Logger logger = LoggerFactory.getLogger(WebhookController.class);
 	
@@ -36,10 +34,7 @@ public class WebhookController {
 	public String testWebhookUrl(Locale locale, Model model, @RequestParam Map<String,String> allRequestParams) {
 		logger.info("Welcome Admin home! The client locale is {}.", locale);
 		
-		RequestsLogs logs = new RequestsLogs();
-		logs.setAllRequestParams(allRequestParams.toString());
-		logs.setTime(new Date().toString());
-		//requestsLogsDao.add(logs);
+		logRequest(allRequestParams);
 		
 		model.addAttribute("requestsLogs", requestsLogsDao.findAll());
 		return "webhook-tiles";

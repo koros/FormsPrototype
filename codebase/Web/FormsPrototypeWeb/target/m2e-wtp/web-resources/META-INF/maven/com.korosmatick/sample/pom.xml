@@ -132,6 +132,13 @@
 			<version>${jackson.version}</version>
 		</dependency>
 		
+		<!-- gson Mapper -->
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.5</version>
+		</dependency>
+		
 		<!-- apache commons -->
 		<dependency>
 			<groupId>commons-io</groupId>

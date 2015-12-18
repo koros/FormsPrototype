@@ -16,7 +16,6 @@ import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import com.korosmatick.formsprototype.MainActivity;
 import com.korosmatick.formsprototype.R;
 import com.korosmatick.formsprototype.activity.FormDataActivity;
 import com.korosmatick.formsprototype.model.Form;

@@ -178,7 +178,7 @@ public class PreviewDataFragment extends Fragment implements SwipeRefreshLayout.
             public void run() {
                 try {
                     SyncManager syncManager = SyncManager.getInstance(getActivity().getApplicationContext());
-                    syncManager.retrieveUnsyncedRows();
+                    syncManager.sync();
                     Thread.sleep(2000);
                 } catch (Exception e){
                     e.printStackTrace();

@@ -23,7 +23,7 @@ import com.korosmatick.sample.service.FormService;
 import com.korosmatick.sample.service.HttpService;
 
 @Controller
-public class FormController {
+public class FormController extends BaseController{
 	
 	private static final Logger logger = LoggerFactory.getLogger(FormController.class);
 	
@@ -39,16 +39,7 @@ public class FormController {
 	@RequestMapping(value = "/prototype/forms", method = RequestMethod.GET)
 	public String forms(Locale locale, Model model, @RequestParam Map<String,String> allRequestParams) {
 		logger.info("Welcome Admin home! The client locale is {}.", locale);
-		
-		RequestsLogs logs = new RequestsLogs();
-		logs.setAllRequestParams(allRequestParams.toString());
-		
-		Date date = new Date();
-		DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, locale);
-		String formattedDate = dateFormat.format(date);
-		logs.setTime(formattedDate);
-		//requestsLogsDao.add(logs);
-		
+		logRequest(allRequestParams);
 		model.addAttribute("forms", formService.getAllForms());
 		return "formsList-tiles";
 	}
@@ -56,16 +47,7 @@ public class FormController {
 	@RequestMapping(value = "/prototype/addForm")
 	public String addForm(Locale locale, Model model, @RequestParam Map<String,String> allRequestParams) {
 		logger.info("Welcome Admin home! The client locale is {}.", locale);
-		
-		RequestsLogs logs = new RequestsLogs();
-		logs.setAllRequestParams(allRequestParams.toString());
-		
-		Date date = new Date();
-		DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, locale);
-		String formattedDate = dateFormat.format(date);
-		logs.setTime(formattedDate);
-		//requestsLogsDao.add(logs);
-		
+		logRequest(allRequestParams);
 		model.addAttribute("form", new Form());
 		return "addForm-tiles";
 	}
@@ -73,16 +55,7 @@ public class FormController {
 	@RequestMapping(value = "/prototype/addNewFormAction")
 	public String addNewFormAction(Locale locale, Model model, @ModelAttribute Form form, @RequestParam Map<String,String> allRequestParams) {
 		logger.info("addNewFormAction");
-		
-		RequestsLogs logs = new RequestsLogs();
-		logs.setAllRequestParams(allRequestParams.toString());
-		
-		Date date = new Date();
-		DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, locale);
-		String formattedDate = dateFormat.format(date);
-		logs.setTime(formattedDate);
-		//requestsLogsDao.add(logs);
-		
+		logRequest(allRequestParams);
 		String formUrl = form.getFormUrl();
 		String formName = form.getFormName();
 		
@@ -102,24 +75,13 @@ public class FormController {
 	@RequestMapping(value = "/editForm/{id}", method = RequestMethod.GET)
 	public String editNewsSource(@PathVariable("id") String id, Locale locale, Model model, @RequestParam Map<String,String> allRequestParams) {
 		logger.info("============== editForm ==============");
-        try
-        {
+        try{
         	Form form = formService.getFormById(Long.valueOf(id));
-        	
-        	RequestsLogs logs = new RequestsLogs();
-    		logs.setAllRequestParams(allRequestParams.toString());
-    		
-    		Date date = new Date();
-    		DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, locale);
-    		String formattedDate = dateFormat.format(date);
-    		logs.setTime(formattedDate);
-    		//requestsLogsDao.add(logs);
-    		
+        	logRequest(allRequestParams);
         	model.addAttribute("form", form);
         	return "editForm-tiles";
         }
-        catch(Exception e)
-        {
+        catch(Exception e){
             return null;
         }
 	}

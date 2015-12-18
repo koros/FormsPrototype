@@ -28,6 +28,7 @@ import javax.sql.DataSource;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -159,6 +160,11 @@ public class HttpService {
 		return form;
 	}
 	
+	/**
+	 * make this method return unique table name per user account!!
+	 * @param node
+	 * @return
+	 */
 	public String retrieveTableNameOrColForNode(Node node){
 		//replace all illegal xters in the table name 
 		return "_" + node.getNodeName().toLowerCase().replaceAll("[^A-Za-z0-9_]", "_");
@@ -199,6 +205,13 @@ public class HttpService {
 			createTableSql.append(", " + foreignIdFieldName  + " INTEGER DEFAULT NULL"); // Same table could be linking to multiple parents hence, we should allow null
             String alterStmt = "alter table " + tableName + " add column " + foreignIdFieldName + " INTEGER DEFAULT NULL";
             alterTableSqlStatements.put(foreignIdFieldName, alterStmt);
+            
+            try {
+            	// add a link to relatioship table
+                createOrUpdateTableRelationshipLink(foreignIdFieldName, tableName, foreignIdFieldName, "one_to_many", foreignIdFieldName, "_id");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
         }
 		
 		NodeList nodeList = node.getChildNodes();
@@ -225,8 +238,44 @@ public class HttpService {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
 	}
+	
+	public void createOrUpdateTableRelationshipLink(String parent_table, String child_table, String field, String kind, String from, String to) throws SQLException{
+		Connection connection = dataSource.getConnection();
+		String query = "SELECT  * FROM entity_relationships WHERE parent_table = \"" + parent_table + "\" AND child_table = \"" + child_table +"\" AND field=\"" + field +"\" AND from_field=\"" +
+                from + "\" AND to_field=\"" + to + "\"";
+		Statement stmt = null;
+		try {
+	        stmt = connection.createStatement();
+	        ResultSet rs = stmt.executeQuery(query);
+	        if (rs.next()) {
+	        	Long id = rs.getLong("_id");
+	        	//update the relationship kind if necessary
+	            String currentRelationship = rs.getString("kind");
+	            if (currentRelationship.equalsIgnoreCase("one_to_one") && kind.equalsIgnoreCase("one_to_many")){
+	                String updateSql = "update entity_relationships set kind=\"" + kind + "\" where _id=" +id;
+	                stmt.execute(updateSql);
+	            }
+	        }else{// the relationship doesn't exist insert a new record to the database
+	        	String insertTableSQL = "INSERT INTO entity_relationships"
+	        			+ "(parent_table, child_table, kind, field, from_field, to_field) VALUES"
+	        			+ "(?,?,?,?,?,?)";
+	        	PreparedStatement preparedStatement = connection.prepareStatement(insertTableSQL);
+	        	preparedStatement.setString(1, parent_table);
+	        	preparedStatement.setString(2, child_table);
+	        	preparedStatement.setString(3, kind);
+	        	preparedStatement.setString(4, field);
+	        	preparedStatement.setString(5, from);
+	        	preparedStatement.setString(6, to);
+	        	// execute insert SQL stetement
+	        	preparedStatement .executeUpdate();
+	        }
+	    } catch (SQLException e ) {
+	        e.printStackTrace();
+	    } finally {
+	        if (stmt != null) { stmt.close(); }
+	    }
+    }
 
 	public static boolean tableContainsColumn(String tableName, String columnName, Connection con) {
 		try {
