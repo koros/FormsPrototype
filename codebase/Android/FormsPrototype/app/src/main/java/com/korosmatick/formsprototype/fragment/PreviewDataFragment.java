@@ -17,7 +17,10 @@ import android.widget.TableRow;
 import android.widget.TextView;
 
 import com.korosmatick.formsprototype.R;
+import com.korosmatick.formsprototype.activity.FormDataActivity;
 import com.korosmatick.formsprototype.database.MySQLiteHelper;
+import com.korosmatick.formsprototype.model.Form;
+import com.korosmatick.formsprototype.util.FormBuilder;
 import com.korosmatick.formsprototype.util.SyncManager;
 
 import butterknife.Bind;
@@ -30,16 +33,17 @@ public class PreviewDataFragment extends Fragment implements SwipeRefreshLayout.
 
     @Bind(R.id.tableLayout1) TableLayout tableLayout;
 
-    String tableName = null;
+    Form form = null;
     String[] columnNames = new String[]{};
     LayoutInflater layoutInflater;
 
     MySQLiteHelper mySQLiteHelper;
+    FormBuilder formBuilder;
 
     @Bind(R.id.swipe_refresh_layout) SwipeRefreshLayout swipeRefreshLayout;
 
-    public void setTableName(String tableName){
-        this.tableName = tableName;
+    public void setForm(Form form){
+        this.form = form;
     }
 
     @Nullable
@@ -48,11 +52,12 @@ public class PreviewDataFragment extends Fragment implements SwipeRefreshLayout.
         layoutInflater = inflater;
         View view = inflater.inflate(R.layout.preview_data_fragment, container, false);
         ButterKnife.bind(this, view);
+        formBuilder = FormBuilder.getInstance(getActivity());
 
         swipeRefreshLayout.setOnRefreshListener(this);
 
         mySQLiteHelper = MySQLiteHelper.getInstance(getActivity());
-        columnNames = mySQLiteHelper.getColumnNamesForTable(tableName);
+        columnNames = mySQLiteHelper.getColumnNamesForTable(form.getTableName());
 
         //TableRow rowTitle = getTableTitleView();
         TableRow tableHeaders = getColumnHeaders();
@@ -71,7 +76,7 @@ public class PreviewDataFragment extends Fragment implements SwipeRefreshLayout.
                 tableLayout.removeAllViewsInLayout();
 
                 mySQLiteHelper = MySQLiteHelper.getInstance(getActivity());
-                columnNames = mySQLiteHelper.getColumnNamesForTable(tableName);
+                columnNames = mySQLiteHelper.getColumnNamesForTable(form.getTableName());
 
                 //TableRow rowTitle = getTableTitleView();
                 TableRow tableHeaders = getColumnHeaders();
@@ -90,7 +95,7 @@ public class PreviewDataFragment extends Fragment implements SwipeRefreshLayout.
         rowTitle.setGravity(Gravity.CENTER_HORIZONTAL);
 
         TextView title = new TextView(getActivity());
-        title.setText(tableName);
+        title.setText(form.getTableName());
 
         title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
         //title.setGravity(Gravity.CENTER);
@@ -139,6 +144,16 @@ public class PreviewDataFragment extends Fragment implements SwipeRefreshLayout.
                     tr.addView(tv);
                 }
                 table.addView(tr);
+                Long id = cursor.getLong(cursor.getColumnIndex("_id"));
+                tr.setTag(id);
+                tr.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Long id = Long.valueOf(v.getTag().toString());
+                        String xml = formBuilder.buildFormSubmissionXMLString(form, id);
+                        ((FormDataActivity)getActivity()).switchToDisplayFormFragment(1, xml);
+                    }
+                });
                 row++;
             } while (cursor.moveToNext());
         }
@@ -156,7 +171,7 @@ public class PreviewDataFragment extends Fragment implements SwipeRefreshLayout.
 
     // Add more params in future to provide flexibility
     public String buildTableQuery(){
-        return "SELECT * FROM " + tableName;
+        return "SELECT * FROM " + form.getTableName();
     }
 
     public static void setMargins (View view, int margin) {

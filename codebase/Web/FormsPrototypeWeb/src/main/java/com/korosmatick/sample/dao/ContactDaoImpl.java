@@ -67,6 +67,7 @@ public class ContactDaoImpl implements ContactDao{
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public List<Contact> findAll() {
 		logger.debug("findAll() called");
 		Session session = sessionFactory.getCurrentSession();

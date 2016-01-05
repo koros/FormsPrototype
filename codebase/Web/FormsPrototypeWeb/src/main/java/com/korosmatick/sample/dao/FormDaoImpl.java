@@ -66,7 +66,9 @@ public class FormDaoImpl implements FormDao{
 		session.delete(genericCategory);
 	}
 
+	
 	@Override
+	@SuppressWarnings("unchecked")
 	public List<Form> findAll() {
 		logger.debug("findAll() called");
 		Session session = sessionFactory.getCurrentSession();

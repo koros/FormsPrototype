@@ -148,7 +148,7 @@ public class FormDataActivity extends AppCompatActivity {
             switch (position) {
                 case 0:
                     fragment = new PreviewDataFragment();
-                    ((PreviewDataFragment)fragment).setTableName(form.getTableName());
+                    ((PreviewDataFragment)fragment).setForm(form);
                     break;
                 case 1:
                     fragment = new DisplayFormFragment();

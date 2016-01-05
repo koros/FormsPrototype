@@ -2,6 +2,9 @@ package com.korosmatick.sample.controller.api;
 
 import java.util.Map;
 
+import javax.sql.DataSource;
+import javax.transaction.Synchronization;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,6 +15,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.google.gson.Gson;
 import com.korosmatick.sample.controller.BaseController;
+import com.korosmatick.sample.dao.DbChangeLogDao;
+import com.korosmatick.sample.dao.DbChangeLogTransactionDao;
 import com.korosmatick.sample.dao.RequestsLogsDao;
 import com.korosmatick.sample.model.api.Response;
 import com.korosmatick.sample.model.api.ResponseWrapper;
@@ -29,7 +34,14 @@ public class SyncController extends BaseController{
 	@Autowired
 	RequestsLogsDao requestsLogsDao;
 	
-	@Autowired SyncManager syncManager;
+	@Autowired
+	private DataSource dataSource;
+	
+	@Autowired 
+	DbChangeLogTransactionDao dbChangeLogTransactionDao;
+	
+	@Autowired 
+	DbChangeLogDao dbChangeLogDao;
 	
 	@RequestMapping(value="/sync",method = RequestMethod.POST)
 	public @ResponseBody ResponseWrapper syncData(@RequestParam Map<String,String> allRequestParams, @RequestParam String payload) {
@@ -41,6 +53,8 @@ public class SyncController extends BaseController{
 			
 			Gson gson = new Gson();
 			SyncRequestPacket syncRequestPacket = gson.fromJson(payload, SyncRequestPacket.class);
+			
+			SyncManager syncManager = new SyncManager(dataSource, dbChangeLogTransactionDao, dbChangeLogDao);
 			SyncResponse syncResponse = syncManager.handleSyncRequest(syncRequestPacket);
 			
 			response.setSyncResponse(syncResponse);

@@ -83,9 +83,10 @@ public class FormUtils {
         }
     }
 
-    public String retrieveTableNameOrColForField(String field){
+    public static String retrieveTableNameOrColForField(String field){
         //replace all illegal xters in the table name
-        return "_" + field.toLowerCase().replaceAll("[^A-Za-z0-9_]", "_");
+        String normalizedTblName = field.toLowerCase().replaceAll("[^A-Za-z0-9_]", "_");
+        return normalizedTblName.startsWith("_") ? normalizedTblName : "_" + normalizedTblName;
     }
 
     public Long saveJsonObjectFields(JSONObject jsonObject, String tableName, String foreignIdFieldName, Long foreignId){

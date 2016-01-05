@@ -1,18 +1,25 @@
 package com.korosmatick.sample.model.db;
 
+import java.io.Serializable;
+
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 
 @Entity
-public class DbChangeLog {
+public class DbChangeLog implements Serializable{
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -3006188811391335375L;
+	
 	@Id 
 	@GeneratedValue
 	private Long id;
+	private Long changeLogTransactionId;
 	private Long recordId;
 	private int changeType;
-	private Long userId;
 	private String tableName;
 	private String columnName;
 	private String value; /** not necessarily the case all the time **/
@@ -23,6 +30,14 @@ public class DbChangeLog {
 
 	public void setId(Long id) {
 		this.id = id;
+	}
+
+	public Long getChangeLogTransactionId() {
+		return changeLogTransactionId;
+	}
+
+	public void setChangeLogTransactionId(Long changeLogTransactionId) {
+		this.changeLogTransactionId = changeLogTransactionId;
 	}
 
 	public Long getRecordId() {
@@ -40,15 +55,7 @@ public class DbChangeLog {
 	public void setChangeType(int changeType) {
 		this.changeType = changeType;
 	}
-
-	public Long getUserId() {
-		return userId;
-	}
-
-	public void setUserId(Long userId) {
-		this.userId = userId;
-	}
-
+	
 	public String getTableName() {
 		return tableName;
 	}

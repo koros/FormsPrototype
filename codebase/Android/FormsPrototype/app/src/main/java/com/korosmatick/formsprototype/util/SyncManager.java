@@ -75,7 +75,7 @@ public class SyncManager {
             Response response = client.newCall(request).execute();
             if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
 
-            System.out.println(response.body().string());
+            Log.d(TAG, response.body().string());
 
         }catch (Exception e) {
             e.printStackTrace();

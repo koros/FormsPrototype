@@ -55,6 +55,7 @@ public class RequestsLogsDaoImpl implements RequestsLogsDao{
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public List<RequestsLogs> findAll() {
 		logger.debug("findAll() called");
 		Session session = sessionFactory.getCurrentSession();

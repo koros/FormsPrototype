@@ -10,6 +10,7 @@ import android.util.Xml;
 
 
 import com.korosmatick.formsprototype.database.MySQLiteHelper;
+import com.korosmatick.formsprototype.model.Form;
 
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
@@ -49,9 +50,9 @@ public class FormBuilder {
         return instance;
     }
 
-    public String buildFormSubmissionXMLString(String formName, Long recordId){
+    public String buildFormSubmissionXMLString(Form form, Long recordId){
         try{
-            Document document = getXMLModelTemplateForFormName(formName);
+            Document document = getXMLModelTemplateForFormName(form.getModelNode());
 
             XmlSerializer serializer = Xml.newSerializer();
             StringWriter writer = new StringWriter();
@@ -83,16 +84,14 @@ public class FormBuilder {
         return "";
     }
 
-    private Document getXMLModelTemplateForFormName(String formName) throws Exception {
-        String filePath = "web/" + formName + "/model";
+    private Document getXMLModelTemplateForFormName(String formStr) throws Exception {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setValidating(false);
         DocumentBuilder db = dbf.newDocumentBuilder();
 
-        String str = readFileFromAssets(filePath);
-        str = str.replaceAll("\\\\\"", "\"").replaceAll("\\\\/", "/"); // remove the escaped strings
+        formStr = formStr.replaceAll("\\\\\"", "\"").replaceAll("\\\\/", "/"); // remove the escaped strings
         // convert String into InputStream
-        InputStream is = new ByteArrayInputStream(str.getBytes());
+        InputStream is = new ByteArrayInputStream(formStr.getBytes());
         Document document = db.parse(is);
 
         return document;
@@ -133,10 +132,11 @@ public class FormBuilder {
                         Element child = (Element) entries.item(i);
 
                         String fieldName = child.getNodeName();
-                        if (cursor.getColumnIndex(fieldName) != -1){
+                        String columnName = FormUtils.retrieveTableNameOrColForField(fieldName);
+                        if (cursor.getColumnIndex(columnName) != -1){
 
-                            String childTableName = fieldName;
-                            String parentTableName = nodeName;
+                            String childTableName = columnName;
+                            String parentTableName = FormUtils.retrieveTableNameOrColForField(nodeName);
                             // check if the field falls under foreign id cols and
                             if (mySQLiteHelper.tableExists(childTableName) && mySQLiteHelper.tableContainsColumn(childTableName, parentTableName)){
                                 String sqlQuery = "select * from " + childTableName + " where " + parentTableName + " = \"" + id + "\"";
@@ -153,7 +153,7 @@ public class FormBuilder {
                             else{// its not a table
                                 serializer.startTag("", fieldName);
                                 String fieldValue = "";
-                                int columnIdex = cursor.getColumnIndex(fieldName);
+                                int columnIdex = cursor.getColumnIndex(columnName);
                                 if (cursor.getType(columnIdex) == Cursor.FIELD_TYPE_STRING){
                                     fieldValue = cursor.getString(columnIdex);
                                 }else if (cursor.getType(columnIdex) == Cursor.FIELD_TYPE_FLOAT){
@@ -180,11 +180,15 @@ public class FormBuilder {
 
     private void writeXMLAttributes(Element node, XmlSerializer serializer, Long recordId){
         try {
-            String nodeName = node.getNodeName();
-            if (mySQLiteHelper.tableExists(nodeName)){
-                Cursor cursor = retrieveDatabaseRecordForNode(nodeName, recordId);
+            String tableName = FormUtils.retrieveTableNameOrColForField(node.getNodeName());
+            if (mySQLiteHelper.tableExists(tableName)){
+                Cursor cursor = retrieveDatabaseRecordForNode(tableName, recordId);
 
                 if (cursor.moveToFirst()){
+
+                    // write the _id field as an attribute useful if we are editing a repeat group
+                    serializer.attribute("", "_id", cursor.getString(cursor.getColumnIndex("_id")));
+
                     // get a map containing the attributes of this node
                     NamedNodeMap attributes = node.getAttributes();
 
@@ -194,10 +198,14 @@ public class FormBuilder {
                     for (int i = 0; i < numAttrs; i++) {
                         Attr attr = (Attr) attributes.item(i);
                         String attrName = attr.getNodeName();
+                        String columnName = FormUtils.retrieveTableNameOrColForField(attrName);
                         try{
                             // setting attribute to element
-                            if (cursor.getColumnIndex(attrName) != -1){
-                                serializer.attribute("", attrName, cursor.getString(cursor.getColumnIndex(attrName)));
+                            if (cursor.getColumnIndex(columnName) != -1){
+                                String attrValue = cursor.getString(cursor.getColumnIndex(columnName));
+                                if (attrValue != null){
+                                    serializer.attribute("", attrName, attrValue);
+                                }
                             }
                         }catch (Exception doNothing){
                             doNothing.printStackTrace();
@@ -214,7 +222,8 @@ public class FormBuilder {
     }
 
     public Cursor retrieveDatabaseRecordForNode(String node, Long id){
-        String sqlQuery = "select * from " + node + " where _id = " + id;
+        String tableName = FormUtils.retrieveTableNameOrColForField(node);
+        String sqlQuery = "select * from " + tableName + " where _id = " + id;
         Cursor cursor = mySQLiteHelper.executeQuery(sqlQuery);
         return cursor;
     }

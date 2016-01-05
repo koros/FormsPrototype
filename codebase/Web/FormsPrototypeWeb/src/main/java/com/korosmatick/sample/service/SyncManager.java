@@ -5,28 +5,44 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.sql.DataSource;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.korosmatick.sample.dao.DbChangeLogDao;
+import com.korosmatick.sample.dao.DbChangeLogTransactionDao;
 import com.korosmatick.sample.model.api.Row;
 import com.korosmatick.sample.model.api.SyncRequestPacket;
 import com.korosmatick.sample.model.api.SyncResponse;
 import com.korosmatick.sample.model.api.SyncResponseItem;
+import com.korosmatick.sample.model.db.DbChangeLog;
+import com.korosmatick.sample.model.db.DbChangeLogTransaction;
+import com.korosmatick.sample.util.Constants.SyncType;
 
-@Component
 public class SyncManager {
-
-	@Autowired
+	
+	private static final Logger logger = LoggerFactory.getLogger(SyncManager.class);
+	
 	private DataSource dataSource;
+	private DbChangeLogTransactionDao dbChangeLogTransactionDao;
+	private DbChangeLogDao dbChangeLogDao;
+	private DbChangeLogTransaction dbChangeLogTransaction;
+	
+	public SyncManager(DataSource dataSource, DbChangeLogTransactionDao dbChangeLogTransactionDao, DbChangeLogDao dbChangeLogDao){
+		this.dataSource = dataSource;
+		this.dbChangeLogTransactionDao = dbChangeLogTransactionDao;
+		this.dbChangeLogDao = dbChangeLogDao;
+	}
 	
 	public SyncResponse handleSyncRequest(SyncRequestPacket packet){
-		
+		this.dbChangeLogTransaction = createDbChangeLogTransaction();
 		SyncResponse syncResponse = new SyncResponse();
 		syncResponse.setSyncedItems(new ArrayList<SyncResponseItem>());
 		List<Row> rows = packet.getRecords();
@@ -36,6 +52,15 @@ public class SyncManager {
 		}
 		
 		return syncResponse;
+	}
+	
+	private DbChangeLogTransaction createDbChangeLogTransaction(){
+		DbChangeLogTransaction dbChangeLogTransaction = new DbChangeLogTransaction();
+		dbChangeLogTransaction.setTimeStamp(new Date());
+		dbChangeLogTransaction.setUserId("1");
+		dbChangeLogTransactionDao.add(dbChangeLogTransaction);
+		logger.debug(" ---- dbChangeLogTransaction saved with id : " + dbChangeLogTransaction.getId());
+		return dbChangeLogTransaction;
 	}
 	
 	private SyncResponse saveRowObjectToDb(Row row, SyncResponse syncResponse, Long parentRecordId){
@@ -103,8 +128,10 @@ public class SyncManager {
     		try {
     	        stmt = connection.createStatement();
     	        id = (long) stmt.executeUpdate(insertSqlStmt.toString(), Statement.RETURN_GENERATED_KEYS);
+    	        createChangeLogForMap(map, tableName, id);
     	    } catch (SQLException e ) {
     	        e.printStackTrace();
+    	        logger.error(e.toString());
     	    } finally {
     	        if (stmt != null) { stmt.close(); }
     	    }
@@ -113,9 +140,28 @@ public class SyncManager {
 			
 		} catch (Exception e) {
 			e.printStackTrace();
+			logger.error(e.toString());
 		}
 		
 		return null;
+	}
+	
+	private void createChangeLogForMap(Map<String, String> map, String tableName, Long recordId){
+		if (map != null) {
+			Set<String> keys = map.keySet();
+			for (String s : keys) {
+				String columnName = s;
+				String value = map.get(s);
+				DbChangeLog dbChangeLog = new DbChangeLog();
+				dbChangeLog.setChangeLogTransactionId(dbChangeLogTransaction.getId());
+				dbChangeLog.setChangeType(SyncType.NEW_RECORD_CREATION);
+				dbChangeLog.setColumnName(columnName);
+				dbChangeLog.setTableName(tableName);
+				dbChangeLog.setValue(value);
+				dbChangeLog.setRecordId(recordId);
+				dbChangeLogDao.add(dbChangeLog);
+			}
+		}
 	}
 	
 	private boolean isLinkToParentTable(String fieldName, String tableName){
@@ -135,12 +181,13 @@ public class SyncManager {
     	        }
     	    } catch (SQLException e ) {
     	        e.printStackTrace();
+    	        logger.error(e.toString());
     	    } finally {
     	        if (stmt != null) { stmt.close(); }
     	    }
-    		
         }catch (Exception e){
             e.printStackTrace();
+            logger.error(e.toString());
         }
         
         return linkFound;
