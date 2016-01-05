@@ -207,7 +207,7 @@ public class HttpService {
             alterTableSqlStatements.put(foreignIdFieldName, alterStmt);
             
             try {
-            	// add a link to relatioship table
+            	// add a link to relationship table
                 createOrUpdateTableRelationshipLink(foreignIdFieldName, tableName, foreignIdFieldName, "one_to_many", foreignIdFieldName, "_id");
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -242,8 +242,8 @@ public class HttpService {
 	
 	public void createOrUpdateTableRelationshipLink(String parent_table, String child_table, String field, String kind, String from, String to) throws SQLException{
 		Connection connection = dataSource.getConnection();
-		String query = "SELECT  * FROM entity_relationships WHERE parent_table = \"" + parent_table + "\" AND child_table = \"" + child_table +"\" AND field=\"" + field +"\" AND from_field=\"" +
-                from + "\" AND to_field=\"" + to + "\"";
+		String query = "SELECT  * FROM entity_relationships WHERE parent_table = '" + parent_table + "' AND child_table = '" + child_table +"' AND field='" + field +"' AND from_field='" +
+                from + "' AND to_field='" + to + "'";
 		Statement stmt = null;
 		try {
 	        stmt = connection.createStatement();
@@ -259,7 +259,7 @@ public class HttpService {
 	        }else{// the relationship doesn't exist insert a new record to the database
 	        	String insertTableSQL = "INSERT INTO entity_relationships"
 	        			+ "(parent_table, child_table, kind, field, from_field, to_field) VALUES"
-	        			+ "(?,?,?,?,?,?)";
+	        			+ "(?, ?, ?, ?, ?, ?)";
 	        	PreparedStatement preparedStatement = connection.prepareStatement(insertTableSQL);
 	        	preparedStatement.setString(1, parent_table);
 	        	preparedStatement.setString(2, child_table);
