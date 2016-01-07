@@ -33,7 +33,7 @@ public class HomeActivity extends AppCompatActivity {
     FormsListAdapter adapter;
     List<Form> items = new ArrayList<Form>();
     MySQLiteHelper mySQLiteHelper = null;
-    // 10.0.2.2 - localhost
+    // 10.0.2.2 - localhost address when running an emulators
     String formsEndpoint = "http://10.0.2.2:8080/sample/rest/forms";
 
     @Override

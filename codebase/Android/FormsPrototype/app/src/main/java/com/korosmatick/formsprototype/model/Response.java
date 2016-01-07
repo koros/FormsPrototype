@@ -25,6 +25,8 @@ public class Response {
     @JsonProperty("forms")
     private List<Form> forms;
 
+    private SyncResponse syncResponse;
+
     public double getVersion() {
         return version;
     }
@@ -55,5 +57,13 @@ public class Response {
 
     public void setForms(List<Form> forms) {
         this.forms = forms;
+    }
+
+    public SyncResponse getSyncResponse() {
+        return syncResponse;
+    }
+
+    public void setSyncResponse(SyncResponse syncResponse) {
+        this.syncResponse = syncResponse;
     }
 }

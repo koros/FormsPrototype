@@ -28,7 +28,6 @@ import javax.sql.DataSource;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -253,7 +252,7 @@ public class HttpService {
 	        	//update the relationship kind if necessary
 	            String currentRelationship = rs.getString("kind");
 	            if (currentRelationship.equalsIgnoreCase("one_to_one") && kind.equalsIgnoreCase("one_to_many")){
-	                String updateSql = "update entity_relationships set kind=\"" + kind + "\" where _id=" +id;
+	                String updateSql = "update entity_relationships set kind='" + kind + "' where _id=" +id;
 	                stmt.execute(updateSql);
 	            }
 	        }else{// the relationship doesn't exist insert a new record to the database

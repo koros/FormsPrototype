@@ -73,6 +73,16 @@ public class FormUtils {
             //sync_table (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, table TEXT NOT NULL, record_id INTEGER NOT NULL, type TEXT NOT NULL, column TEXT NULL)
             // get reference to writable DB
             SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+
+            String query = "SELECT  * FROM sync_table WHERE table_name = '" + tableName + "' AND record_id =" + record_id + " AND type = 'insert'";
+
+            Cursor cursor = db.rawQuery(query, null);
+
+            if (cursor.getCount() > 0) {
+                // the reference to the record creation has already been saved
+                return;
+            }
+
             ContentValues values = new ContentValues();
             values.put("table_name", tableName);
             values.put("record_id", record_id);
@@ -107,11 +117,23 @@ public class FormUtils {
 			 * generate create table & insert sql statement
 			 */
             for(String field : fields) {
+                String columnName = retrieveTableNameOrColForField(field);
+                // skip the id attribute currently redundant and collides with the _id field
+                if (field.equalsIgnoreCase("id"))
+                    continue;
                 if (jsonObject.get(field) instanceof JSONObject) {
                     JSONObject object = jsonObject.getJSONObject(field);
-                    String columnName = retrieveTableNameOrColForField(field);
                     if (object.has(CONTENT_FIELD) && mySQLiteHelper.tableContainsColumn(tableName, columnName)){
                         values.put(columnName, object.getString(CONTENT_FIELD));
+                    }
+                }else if (jsonObject.get(field) instanceof JSONArray) {
+                    JSONArray object = jsonObject.getJSONArray(field);
+                    String value = object.length() > 0 ? String.valueOf(object.get(0)) : null;
+                    values.put(columnName, value);
+                }else{
+                    if (mySQLiteHelper.tableContainsColumn(tableName, columnName)){
+                        String fieldValue = String.valueOf(jsonObject.get(field));
+                        values.put(columnName, fieldValue);
                     }
                 }
             }
@@ -157,51 +179,6 @@ public class FormUtils {
         return null;
     }
 
-    private void addColumnValueForTable(String value, String columnName, String tableName, ContentValues values){
-        tableName = retrieveTableNameOrColForField(tableName);
-        columnName = retrieveTableNameOrColForField(columnName);
-        if (mySQLiteHelper.tableExists(tableName) && mySQLiteHelper.tableContainsColumn(tableName, columnName)){
-            values.put(columnName, value);
-        }
-    }
-
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB) // needs refactoring not sound at the moment
-    public void performCascadeDeleteOnAllObjectsBelongingToTableRow(String tableName, String filterField, Long filterValue){
-        try {
-            String query = "SELECT  * FROM " + tableName + " WHERE " + filterField + " = " + filterValue;
-
-            // get reference to writable DB
-            SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
-            Cursor cursor = db.rawQuery(query, null);
-
-            if (cursor.moveToFirst()) {
-                do {
-                    for (int i = 0; i < cursor.getColumnCount(); i++) {
-                        String fieldName = cursor.getColumnName(i);
-                        String fieldValue = null;
-                        Long id = cursor.getLong(cursor.getColumnIndex("_id"));
-
-                        if (cursor.getType(i) == Cursor.FIELD_TYPE_STRING && (fieldValue = cursor.getString(i)).equalsIgnoreCase("FETCH_OBJECT")) {
-                            performCascadeDeleteOnAllObjectsBelongingToTableRow(fieldName, tableName, id);
-
-                            //delete the record
-                            String deleteQuery = "delete from " + tableName + " where _id=" + id;
-                            db.execSQL(deleteQuery);
-                        }
-                    }
-                } while (cursor.moveToNext());
-            }
-
-            //delete the record
-            String deleteQuery = "DELETE FROM " + tableName + " WHERE " + filterField + " = " + filterValue;
-            db.execSQL(deleteQuery);
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
-
-    }
-
     /*
      * Insert the a new record to the database and returns its id,
      * on the Android client side the logic might change a little but the general idea is basically to insert and get the id
@@ -213,42 +190,6 @@ public class FormUtils {
         return id;
     }
 
-
-    public void createOrUpdateTableRelationshipLink(String parent_table, String child_table, String field, String kind, String from, String to){
-        String query = "SELECT  * FROM entity_relationships WHERE parent_table = \"" + parent_table + "\" AND child_table = \"" + child_table +"\" AND field=\"" + field +"\" AND from_field=\"" +
-                from + "\" AND to_field=\"" + to + "\"";
-        SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
-        Cursor cursor = db.rawQuery(query, null);
-
-        if (cursor.moveToFirst()) {
-            Long id = cursor.getLong(cursor.getColumnIndex("_id"));
-            //update the relationship kind if necessary
-            String currentRelationship = cursor.getString(cursor.getColumnIndex("kind"));
-            if (currentRelationship.equalsIgnoreCase("one_to_one") && kind.equalsIgnoreCase("one_to_many")){
-                String updateSql = "update entity_relationships set kind=\"" + kind + "\" where _id=" +id;
-                db.execSQL(updateSql);
-            }
-
-        } else { // the relationship doesn't exist insert a new record to the database
-            ContentValues values = new ContentValues();
-            values.put("parent_table", parent_table);
-            values.put("child_table", child_table);
-            values.put("kind", kind);
-            values.put("field", field);
-            values.put("from_field", from);
-            values.put("to_field", to);
-
-            Long id = db.insertWithOnConflict("entity_relationships", BaseColumns._ID, values, SQLiteDatabase.CONFLICT_REPLACE);
-        }
-    }
-
-    public List<Long> retrieveAllForm1Data(){
-        return mySQLiteHelper.getAllItemsFromTableName("FWNewHH");
-    }
-
-    public List<Long> retrieveAllForm2Data(){
-        return mySQLiteHelper.getAllItemsFromTableName("register_anc");
-    }
 
     public static boolean isArrayOfObjects(JSONArray array) throws Exception {
         return (array != null && array.length() > 0 && array.get(0) instanceof JSONObject);

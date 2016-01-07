@@ -1,6 +1,7 @@
 package com.korosmatick.sample.service;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -31,12 +32,14 @@ public class SyncManager {
 	private static final Logger logger = LoggerFactory.getLogger(SyncManager.class);
 	
 	private DataSource dataSource;
+	Connection connection;
 	private DbChangeLogTransactionDao dbChangeLogTransactionDao;
 	private DbChangeLogDao dbChangeLogDao;
 	private DbChangeLogTransaction dbChangeLogTransaction;
 	
-	public SyncManager(DataSource dataSource, DbChangeLogTransactionDao dbChangeLogTransactionDao, DbChangeLogDao dbChangeLogDao){
+	public SyncManager(DataSource dataSource, DbChangeLogTransactionDao dbChangeLogTransactionDao, DbChangeLogDao dbChangeLogDao) throws SQLException{
 		this.dataSource = dataSource;
+		connection = dataSource.getConnection();
 		this.dbChangeLogTransactionDao = dbChangeLogTransactionDao;
 		this.dbChangeLogDao = dbChangeLogDao;
 	}
@@ -88,7 +91,7 @@ public class SyncManager {
 	
 	private Long saveSingleTableRowTodb(Map<String, String> map, String tableName, Long parentId){
 		try {
-			Connection connection = dataSource.getConnection();
+			//Connection connection = dataSource.getConnection();
     		Statement stmt = null;
     		
 			StringBuilder insertSqlStmt = new StringBuilder("insert into " + tableName + " "); 
@@ -106,6 +109,11 @@ public class SyncManager {
 			 * generate insert sql statement
 			 */
 			for(String field : fields) {
+				//exclude non relevant fields sent from the client side
+				if (!isValidCulumnName(field, tableName)) {
+					continue;
+				}
+				
 				columnsString.append(field + ", ");
 				String value = null;
 				if (isLinkToParentTable(field, tableName)) {
@@ -120,14 +128,14 @@ public class SyncManager {
 			valuesString.deleteCharAt(valuesString.length() - 2).append(");"); //remove trailing ,
 			insertSqlStmt.append(columnsString.toString()).append(" ").append(valuesString.toString());
 			
+			logger.debug(">>>" + insertSqlStmt.toString());
+			
 			/*
 			 * generate the id for this record
 			 */
-			stmt = connection.createStatement();
 			Long id = null;
     		try {
-    	        stmt = connection.createStatement();
-    	        id = (long) stmt.executeUpdate(insertSqlStmt.toString(), Statement.RETURN_GENERATED_KEYS);
+    			id = insertNewRecordAndReturnId(insertSqlStmt.toString());
     	        createChangeLogForMap(map, tableName, id);
     	    } catch (SQLException e ) {
     	        e.printStackTrace();
@@ -146,6 +154,10 @@ public class SyncManager {
 		return null;
 	}
 	
+	private boolean isValidCulumnName(String field, String tableName) {
+		return !field.equalsIgnoreCase("_id") && HttpService.tableContainsColumn(tableName, field, connection);
+	}
+
 	private void createChangeLogForMap(Map<String, String> map, String tableName, Long recordId){
 		if (map != null) {
 			Set<String> keys = map.keySet();
@@ -169,7 +181,7 @@ public class SyncManager {
         try {
             //entity_relationships (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  parent_table TEXT NOT NULL,  child_table TEXT NOT NULL,
             // field TEXT NOT NULL, kind TEXT NOT NULL, from_field TEXT NOT NULL, to_field TEXT NOT NULL)";
-        	Connection connection = dataSource.getConnection();
+        	//Connection connection = dataSource.getConnection();
     		String query = "SELECT * FROM entity_relationships WHERE child_table ='" + tableName + "' AND parent_table='" + fieldName + "'";
     		Statement stmt = null;
     		
@@ -192,4 +204,22 @@ public class SyncManager {
         
         return linkFound;
     }
+	
+	private long insertNewRecordAndReturnId(String sql) throws Exception {
+		PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+        int affectedRows = statement.executeUpdate();
+
+        if (affectedRows == 0) {
+            throw new SQLException("Creating new record failed, no rows affected.");
+        }
+
+        try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
+            if (generatedKeys.next()) {
+                return generatedKeys.getLong(1);
+            }
+            else {
+                throw new SQLException("Creating new record failed, no ID obtained.");
+            }
+        }
+	}
 }

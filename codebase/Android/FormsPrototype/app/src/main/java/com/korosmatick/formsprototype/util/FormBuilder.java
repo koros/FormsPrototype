@@ -186,7 +186,7 @@ public class FormBuilder {
 
                 if (cursor.moveToFirst()){
 
-                    // write the _id field as an attribute useful if we are editing a repeat group
+                    // write the _id field as an attribute useful if we are editing a repeat group and/or a record
                     serializer.attribute("", "_id", cursor.getString(cursor.getColumnIndex("_id")));
 
                     // get a map containing the attributes of this node

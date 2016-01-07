@@ -306,4 +306,21 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
         return rowObject;
     }
 
+    public Map<String, String> sqliteRowToMap(Cursor cursor, int offset) {
+        int totalColumn = cursor.getColumnCount();
+        Map<String, String> rowObject = new HashMap<String, String>();
+        if (cursor != null && cursor.moveToPosition(offset)){
+            for (int i = 0; i < totalColumn; i++) {
+                if (cursor.getColumnName(i) != null) {
+                    try {
+                        rowObject.put(cursor.getColumnName(i), cursor.getString(i));
+                    } catch (Exception e) {
+                        Log.d(TAG, e.getMessage());
+                    }
+                }
+            }
+        }
+        return rowObject;
+    }
+
 }

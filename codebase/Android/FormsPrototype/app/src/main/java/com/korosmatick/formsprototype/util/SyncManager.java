@@ -12,6 +12,8 @@ import com.korosmatick.formsprototype.database.MySQLiteHelper;
 import com.korosmatick.formsprototype.model.Form;
 import com.korosmatick.formsprototype.model.Row;
 import com.korosmatick.formsprototype.model.SyncRequestPacket;
+import com.korosmatick.formsprototype.model.SyncResponse;
+import com.korosmatick.formsprototype.model.SyncResponseItem;
 import com.squareup.okhttp.FormEncodingBuilder;
 import com.squareup.okhttp.MediaType;
 import com.squareup.okhttp.OkHttpClient;
@@ -75,13 +77,28 @@ public class SyncManager {
             Response response = client.newCall(request).execute();
             if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
 
-            Log.d(TAG, response.body().string());
+            String responseStr = response.body().string();
+            Log.d(TAG, responseStr);
+
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            mapper.configure(DeserializationFeature.UNWRAP_ROOT_VALUE, true);
+
+            com.korosmatick.formsprototype.model.Response apiResponse = mapper.readValue(responseStr, com.korosmatick.formsprototype.model.Response.class);
+            SyncResponse syncResponse = apiResponse.getSyncResponse();
+            if (syncResponse != null){
+                List<SyncResponseItem> syncedItems = syncResponse.getSyncedItems();
+                if (syncedItems != null){
+                    for (SyncResponseItem syncResponseItem : syncedItems){
+                        handleSyncResponseItemResponse(syncResponseItem);
+                    }
+                }
+            }
 
         }catch (Exception e) {
             e.printStackTrace();
             return;
         }
-
     }
 
     public List<Row> retrieveUnsyncedRows(){
@@ -99,7 +116,7 @@ public class SyncManager {
                     Map<String, String> map = mySQLiteHelper.sqliteRowToMap(c);
 
                     //iterate through the fields and fetch child records
-                    Row row = retrieveUnsyncedRow(map, tableName);
+                    Row row = retrieveUnsyncedRow(map, tableName, db);
                     unsyncedRows.add(row);
 
                 }while (mCursor.moveToNext());
@@ -112,25 +129,32 @@ public class SyncManager {
         return unsyncedRows;
     }
 
-    private Row retrieveUnsyncedRow(Map<String, String> dbRecord, String tableName) throws Exception{
+    private Row retrieveUnsyncedRow(Map<String, String> dbRecord, String tableName, SQLiteDatabase db) throws Exception{
         Row row = new Row();
         row.setTableName(tableName);
         row.setRow(dbRecord);
 
         List<Row> childRows = new ArrayList<Row>();
 
-        SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+        //SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
 
         //iterate through the fields and fetch child records
         Iterator<?> keys = dbRecord.keySet().iterator();
         while( keys.hasNext() ) {
             String fieldName = (String)keys.next();
             if (isLinkToChildTable(fieldName, tableName)){
-                Cursor c = db.rawQuery("SELECT * FROM " + fieldName + " where " + tableName + "='" + dbRecord.get(fieldName) + "'", null);
-                Map<String, String> map = mySQLiteHelper.sqliteRowToMap(c);
-
-                Row childRow = retrieveUnsyncedRow(map, fieldName);
-                childRows.add(childRow);
+                Cursor c = db.rawQuery("SELECT * FROM " + fieldName + " where " + tableName + "='" + dbRecord.get("_id") + "'", null);
+                //retrieve all the child records
+                int i = 0;
+                if (c != null && c.moveToFirst()){
+                    do {
+                        Map<String, String> map = mySQLiteHelper.sqliteRowToMap(c, i);
+                        Row childRow = retrieveUnsyncedRow(map, fieldName, db);
+                        childRows.add(childRow);
+                        i++;
+                    }while (c.moveToNext());
+                }
+                c.close();
             }
         }
 
@@ -139,17 +163,38 @@ public class SyncManager {
     }
 
     private boolean isLinkToChildTable(String fieldName, String tableName){
+        boolean linkFound = false;
+        Cursor cursor = null;
         try {
             //entity_relationships (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  parent_table TEXT NOT NULL,  child_table TEXT NOT NULL,
             // field TEXT NOT NULL, kind TEXT NOT NULL, from_field TEXT NOT NULL, to_field TEXT NOT NULL)";
             SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
-            Cursor cursor = db.rawQuery("SELECT * FROM entity_relationships WHERE parent_table ='" + tableName + "' AND child_table='" + fieldName + "'", null);
-            return cursor.getCount() > 0;
+            cursor = db.rawQuery("SELECT * FROM entity_relationships WHERE parent_table ='" + tableName + "' AND child_table='" + fieldName + "'", null);
+            linkFound = cursor.getCount() > 0;
+        } catch (Exception e){
+            e.printStackTrace();
+        } finally {
+            cursor.close();
+        }
+        return linkFound;
+    }
+
+    private void handleSyncResponseItemResponse(SyncResponseItem syncResponseItem){
+        try {
+            String tableName = syncResponseItem.getTableName();
+            Long serverId = syncResponseItem.getServerId();
+            Long localId = syncResponseItem.getLocalId();
+            String updateSql = String.format("Update %s set serverId=%d where _id=%d", tableName, serverId, localId);
+            SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+            db.execSQL(updateSql);
+
+            //delete the pointer on the sync table to avoid indefinite growth in the number of records
+            String query = "DELETE FROM sync_table WHERE table_name = '" + tableName + "' AND record_id =" + localId + " AND type = 'insert'";
+            db.execSQL(query);
+
         }catch (Exception e){
             e.printStackTrace();
         }
-
-        return false;
     }
 
 }
