@@ -23,6 +23,8 @@ import com.korosmatick.sample.model.api.Row;
 import com.korosmatick.sample.model.api.SyncRequestPacket;
 import com.korosmatick.sample.model.api.SyncResponse;
 import com.korosmatick.sample.model.api.SyncResponseItem;
+import com.korosmatick.sample.model.api.UpdatedItem;
+import com.korosmatick.sample.model.api.UpdatedItemsPacket;
 import com.korosmatick.sample.model.db.DbChangeLog;
 import com.korosmatick.sample.model.db.DbChangeLogTransaction;
 import com.korosmatick.sample.util.Constants.SyncType;
@@ -50,13 +52,58 @@ public class SyncManager {
 		syncResponse.setSyncedItems(new ArrayList<SyncResponseItem>());
 		List<Row> rows = packet.getRecords();
 		
-		for (Row row : rows) {
-			saveRowObjectToDb(row, syncResponse, null);
+		// process the new records list
+		if (rows != null) {
+			for (Row row : rows) {
+				saveRowObjectToDb(row, syncResponse, null);
+			}
 		}
+		
+		// process the updated items list
+		UpdatedItemsPacket updatedItems = packet.getUpdatedItemsPacket();
+		List<Long> updatedItemsAck = handleUpdatedItemsPacket(updatedItems);
+		syncResponse.setUpdatedItemsAck(updatedItemsAck);
 		
 		return syncResponse;
 	}
 	
+	private List<Long> handleUpdatedItemsPacket(UpdatedItemsPacket updatedItems) {
+		List<Long> updatedItemsAck = new ArrayList<Long>();
+		if (updatedItems != null) {
+			List<UpdatedItem> updatedItemsList = updatedItems.getUpdatedItemList();
+			
+			if (updatedItemsList != null) {
+				for (UpdatedItem updatedItem : updatedItemsList) {
+					if (updateDatabase(updatedItem)) {
+						updatedItemsAck.add(Long.valueOf(updatedItem.getSyncItemId()));
+					}
+				}
+			}
+		}
+		return updatedItemsAck;
+	}
+
+	private boolean updateDatabase(UpdatedItem updatedItem) {
+		try {
+			String updateTableSql = "UPDATE " + updatedItem.getTableName() + " SET " + updatedItem.getColumnName() + " = '" + updatedItem.getNewValue() + "' WHERE _id = " + updatedItem.getServerId();
+    		Statement stmt = null;
+    		
+    		try {
+    	        stmt = connection.createStatement();
+    	        int rs = stmt.executeUpdate(updateTableSql);
+    	        return rs > 0;
+    	    } catch (SQLException e ) {
+    	        e.printStackTrace();
+    	        logger.error(e.toString());
+    	    } finally {
+    	        if (stmt != null) { stmt.close(); }
+    	    }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+
 	private DbChangeLogTransaction createDbChangeLogTransaction(){
 		DbChangeLogTransaction dbChangeLogTransaction = new DbChangeLogTransaction();
 		dbChangeLogTransaction.setTimeStamp(new Date());
@@ -218,7 +265,7 @@ public class SyncManager {
                 return generatedKeys.getLong(1);
             }
             else {
-                throw new SQLException("Creating new record failed, no ID obtained.");
+                throw new SQLException("Creating new record failed, no id obtained.");
             }
         }
 	}

@@ -14,6 +14,7 @@ import com.korosmatick.formsprototype.model.Row;
 import com.korosmatick.formsprototype.model.SyncRequestPacket;
 import com.korosmatick.formsprototype.model.SyncResponse;
 import com.korosmatick.formsprototype.model.SyncResponseItem;
+import com.korosmatick.formsprototype.model.UpdatedItemsPacket;
 import com.squareup.okhttp.FormEncodingBuilder;
 import com.squareup.okhttp.MediaType;
 import com.squareup.okhttp.OkHttpClient;
@@ -58,6 +59,9 @@ public class SyncManager {
         SyncRequestPacket packet = new SyncRequestPacket();
         packet.setType(1);
         packet.setRecords(retrieveUnsyncedRows());
+        UpdatedItemsPacket updatedItemsPacket = new UpdatedItemsPacket();
+        updatedItemsPacket.setUpdatedItemList(mySQLiteHelper.getUpdatedItemList());
+        packet.setUpdatedItemsPacket(updatedItemsPacket);
 
         Gson gson = new Gson();
         String json = gson.toJson(packet);
@@ -88,16 +92,35 @@ public class SyncManager {
             SyncResponse syncResponse = apiResponse.getSyncResponse();
             if (syncResponse != null){
                 List<SyncResponseItem> syncedItems = syncResponse.getSyncedItems();
-                if (syncedItems != null){
-                    for (SyncResponseItem syncResponseItem : syncedItems){
-                        handleSyncResponseItemResponse(syncResponseItem);
-                    }
-                }
+                handleSyncedItemsResponse(syncedItems);
+
+                List<Long> updatedItemsAck = syncResponse.getUpdatedItemsAck();
+                handleUpdatedItemsAck(updatedItemsAck);
+
             }
 
         }catch (Exception e) {
             e.printStackTrace();
             return;
+        }
+    }
+
+    private void handleSyncedItemsResponse(List<SyncResponseItem> syncedItems){
+        if (syncedItems != null){
+            for (SyncResponseItem syncResponseItem : syncedItems){
+                handleSyncResponseItem(syncResponseItem);
+            }
+        }
+    }
+
+    private void handleUpdatedItemsAck(List<Long> updatedItemsAck){
+        if (updatedItemsAck != null){
+            SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+            for (Long id : updatedItemsAck){
+                //delete the pointer on the sync table to avoid indefinite growth in the number of records
+                String query = "DELETE FROM sync_table_updates WHERE _id = " + id;
+                db.execSQL(query);
+            }
         }
     }
 
@@ -179,12 +202,12 @@ public class SyncManager {
         return linkFound;
     }
 
-    private void handleSyncResponseItemResponse(SyncResponseItem syncResponseItem){
+    private void handleSyncResponseItem(SyncResponseItem syncResponseItem){
         try {
             String tableName = syncResponseItem.getTableName();
             Long serverId = syncResponseItem.getServerId();
             Long localId = syncResponseItem.getLocalId();
-            String updateSql = String.format("Update %s set serverId=%d where _id=%d", tableName, serverId, localId);
+            String updateSql = String.format("Update %s set _serverid=%d where _id=%d", tableName, serverId, localId);
             SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
             db.execSQL(updateSql);
 

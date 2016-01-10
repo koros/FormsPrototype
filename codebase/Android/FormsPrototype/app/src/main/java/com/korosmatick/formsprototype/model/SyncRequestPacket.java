@@ -11,6 +11,8 @@ public class SyncRequestPacket {
 
     private List<Row> records;
 
+    private UpdatedItemsPacket updatedItemsPacket;
+
     public int getType() {
         return type;
     }
@@ -25,5 +27,13 @@ public class SyncRequestPacket {
 
     public void setRecords(List<Row> records) {
         this.records = records;
+    }
+
+    public UpdatedItemsPacket getUpdatedItemsPacket() {
+        return updatedItemsPacket;
+    }
+
+    public void setUpdatedItemsPacket(UpdatedItemsPacket updatedItemsPacket) {
+        this.updatedItemsPacket = updatedItemsPacket;
     }
 }

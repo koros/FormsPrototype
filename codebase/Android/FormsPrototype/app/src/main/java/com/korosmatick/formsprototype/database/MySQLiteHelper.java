@@ -10,6 +10,7 @@ import android.provider.BaseColumns;
 import android.util.Log;
 
 import com.korosmatick.formsprototype.model.Form;
+import com.korosmatick.formsprototype.model.UpdatedItem;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -44,6 +45,8 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 
     private static final String CREATE_SYNC_POINTER_TABLE_SQL = "CREATE TABLE sync_pointer (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  pointer_name TEXT NOT NULL UNIQUE,  position INTEGER NOT NULL)";
 
+    private static final String CREATE_SYNC_TABLE_UPDATES_SQL = "CREATE TABLE sync_table_updates (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, server_id INTEGER NOT NULL, table_name TEXT NOT NULL, column_name TEXT NOT NULL, new_value TEXT NOT NULL, synced SMALLINT NOT NULL)";
+
     static MySQLiteHelper instance;
 
     public static MySQLiteHelper getInstance(Context context){
@@ -65,37 +68,12 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
         db.execSQL(CREATE_FOREIGN_KEYS_TABLE_SQL);
         db.execSQL(CREATE_SYNC_TABLE_SQL);
         db.execSQL(CREATE_SYNC_POINTER_TABLE_SQL);
+        db.execSQL(CREATE_SYNC_TABLE_UPDATES_SQL);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         //upgrade the database statements
-    }
-
-    public List<Long> getAllItemsFromTableName(String tableName){
-
-        List<Long> ids = new ArrayList<Long>();
-        if (!tableExists(tableName))
-            return ids;
-
-        String query = "SELECT  * FROM " + tableName;
-
-        // 2. get reference to writable DB
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery(query, null);
-
-
-        if (cursor.moveToFirst()) {
-            do {
-
-                ids.add(cursor.getLong(cursor.getColumnIndex("_id")));
-
-            } while (cursor.moveToNext());
-        }
-
-        Log.d("getAllItems4TableName()", ids.toString());
-
-        return ids;
     }
 
     public boolean tableExists(String tableName) {
@@ -267,11 +245,12 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 
     public Form getFormById(Long id){
         Cursor mCursor = null;
+        Form form = null;
         try {
             SQLiteDatabase db = this.getWritableDatabase();
             mCursor = db.rawQuery("SELECT * FROM " + FORMS_TABLE_NAME + " where _id = '" + id + "' LIMIT 1", null);
             if (mCursor != null && mCursor.moveToFirst()){
-                Form form = new Form();
+                form = new Form();
                 form.setFormVersion(mCursor.getString(mCursor.getColumnIndex("formVersion")));
                 form.setFormId(mCursor.getString(mCursor.getColumnIndex("formId")));
                 form.setTableName(mCursor.getString(mCursor.getColumnIndex("tableName")));
@@ -279,14 +258,13 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
                 form.setModelNode(mCursor.getString(mCursor.getColumnIndex("modelNode")));
                 form.setFormNode(mCursor.getString(mCursor.getColumnIndex("formNode")));
                 form.setFormUrl(mCursor.getString(mCursor.getColumnIndex("formUrl")));
-                return form;
             }
         }catch (Exception e){
             e.printStackTrace();
         }finally {
             if (mCursor != null) mCursor.close();
         }
-        return null;
+        return form;
     }
 
     public Map<String, String> sqliteRowToMap(Cursor cursor) {
@@ -323,4 +301,29 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
         return rowObject;
     }
 
+    public List<UpdatedItem> getUpdatedItemList(){
+        Cursor mCursor = null;
+        List<UpdatedItem> updatedItemList = new ArrayList<UpdatedItem>();
+        //"CREATE TABLE sync_table_updates (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, server_id INTEGER NOT NULL, table_name TEXT NOT NULL, column_name TEXT NOT NULL, new_value TEXT NOT NULL, synced SMALLINT NOT NULL)";
+        try {
+            SQLiteDatabase db = this.getWritableDatabase();
+            mCursor = db.rawQuery("SELECT * FROM sync_table_updates", null);
+            if (mCursor != null && mCursor.moveToFirst()){
+                do {
+                    UpdatedItem updatedItem = new UpdatedItem();
+                    updatedItem.setTableName(mCursor.getString(mCursor.getColumnIndex("table_name")));
+                    updatedItem.setColumnName(mCursor.getString(mCursor.getColumnIndex("column_name")));
+                    updatedItem.setNewValue(mCursor.getString(mCursor.getColumnIndex("new_value")));
+                    updatedItem.setServerId(mCursor.getString(mCursor.getColumnIndex("server_id")));
+                    updatedItem.setSyncItemId(mCursor.getString(mCursor.getColumnIndex("_id")));
+                    updatedItemList.add(updatedItem);
+                } while (mCursor.moveToNext());
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            if (mCursor != null) mCursor.close();
+        }
+        return updatedItemList;
+    }
 }

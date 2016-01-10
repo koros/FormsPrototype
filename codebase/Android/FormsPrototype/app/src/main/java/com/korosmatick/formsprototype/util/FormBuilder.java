@@ -189,6 +189,12 @@ public class FormBuilder {
                     // write the _id field as an attribute useful if we are editing a repeat group and/or a record
                     serializer.attribute("", "_id", cursor.getString(cursor.getColumnIndex("_id")));
 
+                    int serverIdIndex = cursor.getColumnIndex("_serverid");
+                    if (serverIdIndex != -1 && !StringUtils.isEmpty(cursor.getString(serverIdIndex))){
+                        //write the serverid useful when creating a record in the sync table
+                        serializer.attribute("", "_serverid", cursor.getString(serverIdIndex));
+                    }
+
                     // get a map containing the attributes of this node
                     NamedNodeMap attributes = node.getAttributes();
 

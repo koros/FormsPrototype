@@ -7,6 +7,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.provider.BaseColumns;
+import android.test.mock.MockApplication;
+import android.util.Log;
 
 import com.korosmatick.formsprototype.database.MySQLiteHelper;
 
@@ -57,7 +59,8 @@ public class FormUtils {
                 String tableName = retrieveTableNameOrColForField(key);
                 if (mySQLiteHelper.tableExists(tableName)){
                     id = saveJsonObjectFields(object, tableName, null, null);
-                    if (id != null){
+                    boolean isNewRecord = !object.has("_id");
+                    if (id != null && isNewRecord){
                         //create an insert ref in the sync table
                         createNewRecordInsertRecordInSyncTable(id, tableName);
                     }
@@ -73,13 +76,12 @@ public class FormUtils {
             //sync_table (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, table TEXT NOT NULL, record_id INTEGER NOT NULL, type TEXT NOT NULL, column TEXT NULL)
             // get reference to writable DB
             SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
-
             String query = "SELECT  * FROM sync_table WHERE table_name = '" + tableName + "' AND record_id =" + record_id + " AND type = 'insert'";
-
             Cursor cursor = db.rawQuery(query, null);
 
             if (cursor.getCount() > 0) {
                 // the reference to the record creation has already been saved
+                cursor.close();
                 return;
             }
 
@@ -126,11 +128,11 @@ public class FormUtils {
                     if (object.has(CONTENT_FIELD) && mySQLiteHelper.tableContainsColumn(tableName, columnName)){
                         values.put(columnName, object.getString(CONTENT_FIELD));
                     }
-                }else if (jsonObject.get(field) instanceof JSONArray) {
+                } else if (jsonObject.get(field) instanceof JSONArray) {
                     JSONArray object = jsonObject.getJSONArray(field);
                     String value = object.length() > 0 ? String.valueOf(object.get(0)) : null;
                     values.put(columnName, value);
-                }else{
+                } else {
                     if (mySQLiteHelper.tableContainsColumn(tableName, columnName)){
                         String fieldValue = String.valueOf(jsonObject.get(field));
                         values.put(columnName, fieldValue);
@@ -138,10 +140,24 @@ public class FormUtils {
                 }
             }
 
-			/*
+			// retrieve the current values for this record from the database
+            Map<String, String> currentValues = null;
+            String serverId = null;
+            if (fields.contains("_serverid")){
+                serverId = jsonObject.getString("_serverid");
+                currentValues = getTheCurrentValuesForRecord(tableName, serverId);
+            }
+
+            /*
 			 * generate the id for this record and fetch/create child records
 			 */
             Long id = executeInsertStatement(values, tableName);
+
+            // update the sync table
+            if (currentValues != null && serverId != null){
+                updateTheSyncTable(values, tableName, serverId, currentValues);
+            }
+
 
             for(String field : fields) {
                 String childTableName = retrieveTableNameOrColForField(field);
@@ -190,6 +206,62 @@ public class FormUtils {
         return id;
     }
 
+    /**
+     * create a record in the sync table to track the columns that have changed
+     *
+     * @param values
+     * @param tableName
+     * @param serverId
+     */
+    //TODO: push this to a background thread
+    private void updateTheSyncTable(ContentValues values, String tableName, String serverId, Map<String, String> currentValues){
+        try {
+            SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+            Set<Map.Entry<String, Object>> s = values.valueSet();
+            Iterator itr = s.iterator();
+            while(itr.hasNext())
+            {
+                Map.Entry me = (Map.Entry)itr.next();
+                String key = me.getKey().toString();
+                String value =  String.valueOf(me.getValue());
+
+                Log.d("DatabaseSync", "Key : "+ key + ", Current value : " + currentValues.get(key) + ", New value : "+ value);
+
+                //check the current value of the
+                if (currentValues.containsKey(key)){
+                    String dbValue = currentValues.get(key);
+                    if (!String.valueOf(dbValue).equalsIgnoreCase(String.valueOf(value))){
+                        // the value has changed create a new record in the sync table
+                        ContentValues cv = new ContentValues();
+                        cv.put("table_name", tableName);
+                        cv.put("column_name", key);
+                        cv.put("new_value", value);
+                        cv.put("server_id", serverId);
+                        cv.put("synced", 0);
+                        Long id = db.insertWithOnConflict("sync_table_updates", BaseColumns._ID, cv, SQLiteDatabase.CONFLICT_REPLACE);
+                    }
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * retrieve the current values for a record in the database
+     *
+     * @param tableName the name of the table to be queried
+     * @param serverId the value for serverId
+     * @return
+     */
+    private Map<String,String> getTheCurrentValuesForRecord(String tableName, String serverId){
+        Map<String, String> dbValues = new HashMap<String, String>();
+        SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+        String query = "SELECT  * FROM " + tableName + " WHERE _serverid = " + serverId;
+        Cursor cursor = db.rawQuery(query, null);
+        dbValues = mySQLiteHelper.sqliteRowToMap(cursor);
+        return dbValues;
+    }
 
     public static boolean isArrayOfObjects(JSONArray array) throws Exception {
         return (array != null && array.length() > 0 && array.get(0) instanceof JSONObject);
