@@ -314,7 +314,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
                     updatedItem.setTableName(mCursor.getString(mCursor.getColumnIndex("table_name")));
                     updatedItem.setColumnName(mCursor.getString(mCursor.getColumnIndex("column_name")));
                     updatedItem.setNewValue(mCursor.getString(mCursor.getColumnIndex("new_value")));
-                    updatedItem.setServerId(mCursor.getString(mCursor.getColumnIndex("server_id")));
+                    updatedItem.setServerId(mCursor.getLong(mCursor.getColumnIndex("server_id")));
                     updatedItem.setSyncItemId(mCursor.getString(mCursor.getColumnIndex("_id")));
                     updatedItemList.add(updatedItem);
                 } while (mCursor.moveToNext());

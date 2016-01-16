@@ -8,7 +8,7 @@ public class UpdatedItem {
     private String tableName;
     private String columnName;
     private String newValue;
-    private String serverId;
+    private Long serverId;
     private String syncItemId;
 
     public String getTableName() {
@@ -35,11 +35,11 @@ public class UpdatedItem {
         this.newValue = newValue;
     }
 
-    public String getServerId() {
+    public Long getServerId() {
         return serverId;
     }
 
-    public void setServerId(String serverId) {
+    public void setServerId(Long serverId) {
         this.serverId = serverId;
     }
 

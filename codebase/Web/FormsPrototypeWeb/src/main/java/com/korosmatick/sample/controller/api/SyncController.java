@@ -25,6 +25,7 @@ import com.korosmatick.sample.model.api.SyncResponse;
 import com.korosmatick.sample.service.FormService;
 import com.korosmatick.sample.service.SyncManager;
 import com.korosmatick.sample.util.ResponseUtils;
+import com.mchange.v2.c3p0.ComboPooledDataSource;
 
 @Controller
 public class SyncController extends BaseController{
@@ -35,7 +36,7 @@ public class SyncController extends BaseController{
 	RequestsLogsDao requestsLogsDao;
 	
 	@Autowired
-	private DataSource dataSource;
+	private ComboPooledDataSource dataSource;
 	
 	@Autowired 
 	DbChangeLogTransactionDao dbChangeLogTransactionDao;
@@ -54,7 +55,7 @@ public class SyncController extends BaseController{
 			Gson gson = new Gson();
 			SyncRequestPacket syncRequestPacket = gson.fromJson(payload, SyncRequestPacket.class);
 			
-			SyncManager syncManager = new SyncManager(dataSource, dbChangeLogTransactionDao, dbChangeLogDao);
+			SyncManager syncManager = new SyncManager(dataSource.getConnection());
 			SyncResponse syncResponse = syncManager.handleSyncRequest(syncRequestPacket);
 			
 			response.setSyncResponse(syncResponse);
