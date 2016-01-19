@@ -3,8 +3,6 @@ package com.korosmatick.sample.model.api;
 import java.util.List;
 import java.util.Map;
 
-import org.json.JSONObject;
-
 public class Row {
 	String tableName;
     Map<String, String> row; //column:value values

@@ -7,11 +7,13 @@ import java.util.List;
  */
 public class SyncRequestPacket {
 
-    private int type = 1; // 1 = new object creation, 2 = update, 3 = delete
+    private int type = 1; // 1 = pull, 2 = push 
 
     private List<Row> records;
     
     private UpdatedItemsPacket updatedItemsPacket;
+    
+    private Long syncPointerPosition;
 
     public int getType() {
         return type;
@@ -36,5 +38,13 @@ public class SyncRequestPacket {
     public void setUpdatedItemsPacket(UpdatedItemsPacket updatedItemsPacket) {
         this.updatedItemsPacket = updatedItemsPacket;
     }
+
+	public Long getSyncPointerPosition() {
+		return syncPointerPosition;
+	}
+
+	public void setSyncPointerPosition(Long syncPointerPosition) {
+		this.syncPointerPosition = syncPointerPosition;
+	}
 }
 

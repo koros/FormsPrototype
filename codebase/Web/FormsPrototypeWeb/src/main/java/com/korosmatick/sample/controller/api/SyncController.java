@@ -2,12 +2,8 @@ package com.korosmatick.sample.controller.api;
 
 import java.util.Map;
 
-import javax.sql.DataSource;
-import javax.transaction.Synchronization;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,8 +11,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.google.gson.Gson;
 import com.korosmatick.sample.controller.BaseController;
-import com.korosmatick.sample.dao.DbChangeLogDao;
-import com.korosmatick.sample.dao.DbChangeLogTransactionDao;
 import com.korosmatick.sample.dao.RequestsLogsDao;
 import com.korosmatick.sample.model.api.Response;
 import com.korosmatick.sample.model.api.ResponseWrapper;
@@ -38,11 +32,6 @@ public class SyncController extends BaseController{
 	@Autowired
 	private ComboPooledDataSource dataSource;
 	
-	@Autowired 
-	DbChangeLogTransactionDao dbChangeLogTransactionDao;
-	
-	@Autowired 
-	DbChangeLogDao dbChangeLogDao;
 	
 	@RequestMapping(value="/sync",method = RequestMethod.POST)
 	public @ResponseBody ResponseWrapper syncData(@RequestParam Map<String,String> allRequestParams, @RequestParam String payload) {

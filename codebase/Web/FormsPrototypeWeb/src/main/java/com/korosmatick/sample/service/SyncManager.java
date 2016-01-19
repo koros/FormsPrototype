@@ -20,6 +20,7 @@ import com.korosmatick.sample.model.api.SyncResponseItem;
 import com.korosmatick.sample.model.api.UpdatedItem;
 import com.korosmatick.sample.model.api.UpdatedItemsPacket;
 import com.korosmatick.sample.util.Constants.SyncType;
+import com.korosmatick.sample.util.DBUtils;
 
 public class SyncManager {
 	
@@ -32,6 +33,96 @@ public class SyncManager {
 	}
 	
 	public SyncResponse handleSyncRequest(SyncRequestPacket packet){
+		SyncResponse syncResponse = new SyncResponse();
+		int type = packet.getType();
+		switch (type) {
+		case 1:
+			syncResponse = handleClientPullRequestPacket(packet);
+			break;
+			
+		case 2:
+			syncResponse = handleClientPushRequestPacket(packet);
+			break;
+			
+		default:
+			break;
+		}
+		return syncResponse;
+	}
+	
+	private SyncResponse handleClientPullRequestPacket(SyncRequestPacket packet){
+		SyncResponse syncResponse = new SyncResponse();
+		
+		Long position = packet.getSyncPointerPosition();
+		//TODO:
+		if (position.intValue() == 0) { 
+			// this is the initial sync handle this differently, e.g just read the current values for each table
+			// other than going through each sync stage/pointer one by one; could be unnecessarily colossal
+		}
+		
+		// get all new records
+		List<Row> newRecords = retrieveNewRecordsSincePointer(position);
+		syncResponse.setNewRecords(newRecords);
+		
+		// get all updated records
+		UpdatedItemsPacket updatedItems = buildUpdatedItemsPacket(position);
+		syncResponse.setUpdatedItemsPacket(updatedItems);
+		
+		//TODO: in a concurrent situation, production, this needs to be improved 
+		Long syncPointerPosition = retriveSyncPointerPosition();
+		syncResponse.setSyncPointerPosition(syncPointerPosition);
+		
+		return syncResponse;
+	}
+	
+	private UpdatedItemsPacket buildUpdatedItemsPacket(Long position) {
+		UpdatedItemsPacket updatedItems = new UpdatedItemsPacket();
+		List<UpdatedItem> updatedItemList = new ArrayList<UpdatedItem>();
+        try {
+        	//sync_table (_id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, type SMALLINT NOT NULL, table_name VARCHAR(255) NOT NULL, record_id INT NOT NULL)
+    		String query = "SELECT * FROM sync_table WHERE _id > " + position + "AND table_name = 'updated_records'";
+    		Statement stmt = null;
+    		Statement stmt2 = null;
+    		try {
+    	        stmt = connection.createStatement();
+    	        ResultSet rs = stmt.executeQuery(query);
+    	        while (rs.next()) {
+    	        	long record_id = rs.getLong("record_id");
+	        		//updated_records (_id SERIAL PRIMARY KEY, table_name VARCHAR(255) NOT NULL, column_name VARCHAR(255) NOT NULL, new_value VARCHAR(255) NOT NULL, record_id INT NOT NULL)
+    	        	String query2 = "SELECT * FROM updated_records WHERE _id = " + record_id;
+    	        	stmt2 = connection.createStatement();
+    	        	ResultSet rs2 = stmt2.executeQuery(query2);
+    	        	while (rs2.next()) {
+						String tableName = rs2.getString("table_name");
+						String columnName = rs2.getString("column_name");
+						String newValue = rs2.getString("new_value");
+						Long id = rs2.getLong("record_id");
+						
+						UpdatedItem item = new UpdatedItem();
+						item.setColumnName(columnName);
+						item.setNewValue(newValue);
+						item.setServerId(id);
+						item.setTableName(tableName);
+						
+						updatedItemList.add(item);
+					}
+    	        }
+    	    } catch (SQLException e ) {
+    	        e.printStackTrace();
+    	        logger.error(e.toString());
+    	    } finally {
+    	        if (stmt != null) { stmt.close(); }
+    	        if (stmt2 != null) { stmt2.close(); }
+    	    }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        
+        updatedItems.setUpdatedItemList(updatedItemList);
+        return updatedItems;
+	}
+
+	private SyncResponse handleClientPushRequestPacket(SyncRequestPacket packet){
 		SyncResponse syncResponse = new SyncResponse();
 		syncResponse.setSyncedItems(new ArrayList<SyncResponseItem>());
 		List<Row> rows = packet.getRecords();
@@ -47,6 +138,11 @@ public class SyncManager {
 		UpdatedItemsPacket updatedItems = packet.getUpdatedItemsPacket();
 		List<Long> updatedItemsAck = handleUpdatedItemsPacket(updatedItems);
 		syncResponse.setUpdatedItemsAck(updatedItemsAck);
+		
+		//retrieve the sync pointer marker; used for subsequent sync by the client
+		//TODO: in a concurrent situation, production, this needs to be improved 
+		Long syncPointerPosition = retriveSyncPointerPosition();
+		syncResponse.setSyncPointerPosition(syncPointerPosition);
 		
 		return syncResponse;
 	}
@@ -99,13 +195,12 @@ public class SyncManager {
     	// execute insert SQL stetement
     	preparedStatement .executeUpdate();
 	}
-
+	
 	private boolean updateDatabase(UpdatedItem updatedItem) {
 		try {
 			//Connection connection = dataSource.getConnection();
 			String updateTableSql = "UPDATE " + updatedItem.getTableName() + " SET " + updatedItem.getColumnName() + " = '" + updatedItem.getNewValue() + "' WHERE _id = " + updatedItem.getServerId();
     		Statement stmt = null;
-    		
     		try {
     	        stmt = connection.createStatement();
     	        int rs = stmt.executeUpdate(updateTableSql);
@@ -165,7 +260,7 @@ public class SyncManager {
 				String value = null;
 				if (isLinkToParentTable(field, tableName)) {
 					value = String.valueOf(parentId);
-				}else{
+				}else if(map.get(field) != null){
 					value = map.get(field).toString();
 				}
 				valuesString.append("'" + value + "', ");
@@ -281,4 +376,141 @@ public class SyncManager {
             }
         }
 	}
+	
+	private Long retriveSyncPointerPosition(){
+		Long syncPointer = null;
+        try {
+        	//sync_table (_id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, type SMALLINT NOT NULL, table_name VARCHAR(255) NOT NULL, record_id INT NOT NULL)
+    		String query = "SELECT _id FROM sync_table ORDER BY _id DESC LIMIT 1";
+    		Statement stmt = null;
+    		
+    		try {
+    	        stmt = connection.createStatement();
+    	        ResultSet rs = stmt.executeQuery(query);
+    	        if (rs.next()) {
+    	        	syncPointer = rs.getLong("_id");
+    	        }
+    	    } catch (SQLException e ) {
+    	        e.printStackTrace();
+    	        logger.error(e.toString());
+    	    } finally {
+    	        if (stmt != null) { stmt.close(); }
+    	    }
+        }catch (Exception e){
+            e.printStackTrace();
+            logger.error(e.toString());
+        }
+        
+        return syncPointer;
+	}
+	
+	public List<Row> retrieveNewRecordsSincePointer(Long pointer){
+        List<Row> unsyncedRows = new ArrayList<Row>();
+        try {
+        	//sync_table (_id SERIAL PRIMARY KEY, user_id VARCHAR(255) NOT NULL, type SMALLINT NOT NULL, table_name VARCHAR(255) NOT NULL, record_id INT NOT NULL)
+    		String query = "SELECT * FROM sync_table WHERE _id > " + pointer + "AND table_name = 'new_records'";
+    		Statement stmt = null;
+    		Statement stmt2 = null;
+    		Statement stmt3 = null;
+    		
+    		try {
+    	        stmt = connection.createStatement();
+    	        ResultSet rs = stmt.executeQuery(query);
+    	        while (rs.next()) {
+    	        	long record_id = rs.getLong("record_id");
+    	        	
+	        		//new_records (_id SERIAL PRIMARY KEY, table_name VARCHAR(255) NOT NULL, record_id INT NOT NULL)
+    	        	String query2 = "SELECT * FROM new_records WHERE _id = " + record_id;
+    	        	stmt2 = connection.createStatement();
+    	        	ResultSet rs2 = stmt2.executeQuery(query2);
+    	        	
+    	        	if (rs2.next()) {
+						String tableName = rs2.getString("table_name");
+						Long id = rs2.getLong("record_id");
+						
+						String query3 = "SELECT * FROM " + tableName + " where _id=" + id;
+						stmt3 = connection.createStatement();
+	    	        	ResultSet rs3 = stmt3.executeQuery(query3);
+	    	        	
+	                    Map<String, String> map = DBUtils.resultSetToMap(rs3);
+
+	                    //iterate through the fields and fetch child records
+	                    Row row = retrieveUnsyncedRow(map, tableName);
+	                    unsyncedRows.add(row);
+						
+					}
+    	        }
+    	    } catch (SQLException e ) {
+    	        e.printStackTrace();
+    	        logger.error(e.toString());
+    	    } finally {
+    	        if (stmt != null) { stmt.close(); }
+    	        if (stmt2 != null) { stmt2.close(); }
+    	        if (stmt3 != null) { stmt3.close(); }
+    	    }
+    		
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return unsyncedRows;
+    }
+
+    private Row retrieveUnsyncedRow(Map<String, String> dbRecord, String tableName) throws Exception{
+        Row row = new Row();
+        row.setTableName(tableName);
+        row.setRow(dbRecord);
+
+        List<Row> childRows = new ArrayList<Row>();
+
+        //iterate through the fields and fetch child records
+        Iterator<?> keys = dbRecord.keySet().iterator();
+        while( keys.hasNext() ) {
+            String fieldName = (String)keys.next();
+            if (isLinkToChildTable(fieldName, tableName)){
+                String query = "SELECT * FROM " + fieldName + " where " + tableName + "='" + dbRecord.get("_id") + "'";
+                Statement stmt = null;
+                
+				try {
+	    	        // Create a scrollable result set
+	    	        stmt = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+	    	        ResultSet.CONCUR_READ_ONLY);
+	    	        
+	    	        ResultSet rs = stmt.executeQuery(query);
+	    	        
+	    	        //retrieve all the child records
+	                int i = 1; // the first row in the result set is 1
+	    	        while (rs.next()) {
+	    	        	Map<String, String> map = DBUtils.resultSetToMap(rs, i);
+                        Row childRow = retrieveUnsyncedRow(map, fieldName);
+                        childRows.add(childRow);
+                        i++;
+	    	        }
+	    	        
+				} catch (Exception e) {
+					e.printStackTrace();
+				}finally {
+					if (stmt != null) { stmt.close(); }
+				}
+            }
+        }
+
+        row.setChildRows(childRows);
+        return row;
+    }
+
+    private boolean isLinkToChildTable(String fieldName, String tableName) throws SQLException{
+        boolean linkFound = false;
+        Statement stmt = null;
+        try {
+            String query = "SELECT * FROM entity_relationships WHERE parent_table ='" + tableName + "' AND child_table='" + fieldName + "'";
+            stmt = connection.createStatement();
+	        ResultSet rs = stmt.executeQuery(query);
+            linkFound = rs.next();
+        } catch (Exception e){
+            e.printStackTrace();
+        } finally {
+        	if (stmt != null) { stmt.close(); }
+        }
+        return linkFound;
+    }
 }

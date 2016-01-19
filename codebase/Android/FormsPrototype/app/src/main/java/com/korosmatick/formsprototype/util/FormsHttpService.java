@@ -189,7 +189,7 @@ public class FormsHttpService {
         String parentName = parentNode != null ? node.getParentNode().getNodeName() : "";
         System.out.println(parentName + " : " + tableName);
 
-        StringBuilder createTableSql = new StringBuilder("create table if not exists " + tableName + "(_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, _serverid INTEGER");
+        StringBuilder createTableSql = new StringBuilder("create table if not exists " + tableName + "(_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, _serverid INTEGER UNIQUE");
         Map<String, String> alterTableSqlStatements = new HashMap<String, String>(); // alter table sql statements if necessary
 
         if (parentNode != null) {

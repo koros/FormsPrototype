@@ -1,8 +1,10 @@
 package com.korosmatick.formsprototype.util;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.provider.BaseColumns;
 import android.util.Log;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -14,6 +16,7 @@ import com.korosmatick.formsprototype.model.Row;
 import com.korosmatick.formsprototype.model.SyncRequestPacket;
 import com.korosmatick.formsprototype.model.SyncResponse;
 import com.korosmatick.formsprototype.model.SyncResponseItem;
+import com.korosmatick.formsprototype.model.UpdatedItem;
 import com.korosmatick.formsprototype.model.UpdatedItemsPacket;
 import com.squareup.okhttp.FormEncodingBuilder;
 import com.squareup.okhttp.MediaType;
@@ -27,6 +30,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -56,8 +60,49 @@ public class SyncManager {
     }
 
     public void sync(){
+        pullFomServer();
+        pushToServer();
+    }
+
+    private void pullFomServer(){
         SyncRequestPacket packet = new SyncRequestPacket();
-        packet.setType(1);
+        Long syncPointerPosition = retriveSyncPointerPosition();
+        if (syncPointerPosition != null){
+            packet.setType(1); //pull
+            packet.setSyncPointerPosition(syncPointerPosition);
+
+            Gson gson = new Gson();
+            String json = gson.toJson(packet);
+
+            String serviceEndpoint = "http://10.0.2.2:8080/sample/sync";//FIXME
+
+            try {
+                RequestBody formBody = new FormEncodingBuilder()
+                        .add("payload", json)
+                        .build();
+                Request request = new Request.Builder()
+                        .url(serviceEndpoint)
+                        .post(formBody)
+                        .build();
+
+                Response response = client.newCall(request).execute();
+                if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+
+                String responseStr = response.body().string();
+                Log.d(TAG, responseStr);
+
+                processApiResponse(responseStr);
+
+            }catch (Exception e) {
+                e.printStackTrace();
+                return;
+            }
+        }
+    }
+
+    private void pushToServer(){
+        SyncRequestPacket packet = new SyncRequestPacket();
+        packet.setType(2); // push
         packet.setRecords(retrieveUnsyncedRows());
         UpdatedItemsPacket updatedItemsPacket = new UpdatedItemsPacket();
         updatedItemsPacket.setUpdatedItemList(mySQLiteHelper.getUpdatedItemList());
@@ -69,7 +114,6 @@ public class SyncManager {
         String serviceEndpoint = "http://10.0.2.2:8080/sample/sync";//FIXME
 
         try {
-
             RequestBody formBody = new FormEncodingBuilder()
                     .add("payload", json)
                     .build();
@@ -84,25 +128,135 @@ public class SyncManager {
             String responseStr = response.body().string();
             Log.d(TAG, responseStr);
 
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-            mapper.configure(DeserializationFeature.UNWRAP_ROOT_VALUE, true);
-
-            com.korosmatick.formsprototype.model.Response apiResponse = mapper.readValue(responseStr, com.korosmatick.formsprototype.model.Response.class);
-            SyncResponse syncResponse = apiResponse.getSyncResponse();
-            if (syncResponse != null){
-                List<SyncResponseItem> syncedItems = syncResponse.getSyncedItems();
-                handleSyncedItemsResponse(syncedItems);
-
-                List<Long> updatedItemsAck = syncResponse.getUpdatedItemsAck();
-                handleUpdatedItemsAck(updatedItemsAck);
-
-            }
+            processApiResponse(responseStr);
 
         }catch (Exception e) {
             e.printStackTrace();
             return;
         }
+    }
+
+    private void processApiResponse(String responseStr) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.configure(DeserializationFeature.UNWRAP_ROOT_VALUE, true);
+
+        com.korosmatick.formsprototype.model.Response apiResponse = mapper.readValue(responseStr, com.korosmatick.formsprototype.model.Response.class);
+        SyncResponse syncResponse = apiResponse.getSyncResponse();
+        if (syncResponse != null){
+            List<SyncResponseItem> syncedItems = syncResponse.getSyncedItems();
+            handleSyncedItemsResponse(syncedItems);
+
+            List<Long> updatedItemsAck = syncResponse.getUpdatedItemsAck();
+            handleUpdatedItemsAck(updatedItemsAck);
+
+            List<Row> newRecords = syncResponse.getNewRecords();
+            handleNewRecords(newRecords);
+
+            UpdatedItemsPacket updatedItems = syncResponse.getUpdatedItemsPacket();
+            handleUpdatedItems(updatedItems);
+
+            Long syncPointer = syncResponse.getSyncPointerPosition();
+            updateSyncPointerPosition(syncPointer);
+
+        }
+    }
+
+    private void handleUpdatedItems(UpdatedItemsPacket updatedItems){
+        if (updatedItems != null){
+            SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+            List<UpdatedItem> updatedItemList = updatedItems.getUpdatedItemList();
+            if (updatedItemList != null){
+                for (UpdatedItem i : updatedItemList){
+                    String query = "UPDATE " + i.getTableName() + " SET " + i.getColumnName() + " = '" + i.getNewValue() +"' WHERE _serverid = " + i.getServerId();
+                    db.execSQL(query);
+                }
+            }
+        }
+    }
+
+    private void handleNewRecords(List<Row> rows){
+        // process the new records list
+        if (rows != null) {
+            for (Row row : rows) {
+                saveRowObjectToDb(row, null);
+            }
+        }
+    }
+
+    private void saveRowObjectToDb(Row row, Long parentRecordId){
+
+        Map<String, String> object = row.getRow();
+        Long id = saveSingleTableRowTodb(object, row.getTableName(), parentRecordId);
+
+        //save the child records if any
+        List<Row> childRows = row.getChildRows();
+        if (childRows != null && !childRows.isEmpty()) {
+            for (Row childRow : childRows) {
+                saveRowObjectToDb(childRow, id);
+            }
+        }
+    }
+
+    private Long saveSingleTableRowTodb(Map<String, String> map, String tableName, Long parentId){
+        try {
+            SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+            ContentValues values = new ContentValues();
+
+            // generate insert sql statement
+            Iterator<?> keys = map.keySet().iterator();
+            while( keys.hasNext() ) {
+                String field = (String)keys.next();
+                if (field.equalsIgnoreCase("_id")){
+                    values.put("_serverid", map.get(field).toString());
+                    continue;
+                }
+
+                //exclude non relevant fields sent from the client side
+                if (!isValidCulumnName(field, tableName)) {
+                    continue;
+                }
+
+                String value = null;
+                if (isLinkToParentTable(field, tableName)) {
+                    value = String.valueOf(parentId);
+                }else if(map.get(field) != null){
+                    value = map.get(field).toString();
+                }
+
+                values.put(field, value);
+            }
+
+			/*
+			 * generate the id for this record
+			 */
+            Long id = db.insertWithOnConflict(tableName, BaseColumns._ID, values, SQLiteDatabase.CONFLICT_REPLACE);
+            return id;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    private boolean isLinkToParentTable(String fieldName, String tableName){
+        boolean linkFound = false;
+        Cursor mCursor = null;
+        try {
+            SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+            mCursor = db.rawQuery("SELECT * FROM entity_relationships WHERE child_table ='" + tableName + "' AND parent_table='" + fieldName + "'", null);
+            linkFound = mCursor != null && mCursor.getCount() > 0;
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            if (mCursor != null) mCursor.close();
+        }
+        return linkFound;
+    }
+
+    private boolean isValidCulumnName(String field, String tableName) throws Exception{
+        return mySQLiteHelper.tableContainsColumn(tableName, field);
     }
 
     private void handleSyncedItemsResponse(List<SyncResponseItem> syncedItems){
@@ -122,6 +276,39 @@ public class SyncManager {
                 db.execSQL(query);
             }
         }
+    }
+
+    private void updateSyncPointerPosition(Long syncPointer){
+        if (syncPointer != null){
+            SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+            //sync_pointer (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, sync_time TIMESTAMP NOT NULL, position INTEGER NOT NULL)
+            ContentValues values = new ContentValues();
+            values.put("_id", 1); // always replace row 1
+            values.put("sync_time", new Date().getTime());
+            values.put("position", syncPointer);
+
+            // we are always replacing the first row on the db with the value from the server
+            Long id = db.insertWithOnConflict("sync_pointer", BaseColumns._ID, values, SQLiteDatabase.CONFLICT_REPLACE);
+        }
+    }
+
+    private Long retriveSyncPointerPosition(){
+        Cursor mCursor = null;
+        Long position = null;
+        try {
+            SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+            mCursor = db.rawQuery("SELECT * FROM sync_pointer" + " ", null);
+            if (mCursor != null && mCursor.moveToFirst()){
+                position = mCursor.getLong(mCursor.getColumnIndex("position"));
+            }else if (mCursor.getCount() == 0){
+                position = 0L;
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            if (mCursor != null) mCursor.close();
+        }
+        return position;
     }
 
     public List<Row> retrieveUnsyncedRows(){

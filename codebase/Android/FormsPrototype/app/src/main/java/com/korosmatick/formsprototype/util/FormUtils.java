@@ -158,7 +158,6 @@ public class FormUtils {
                 updateTheSyncTable(values, tableName, serverId, currentValues);
             }
 
-
             for(String field : fields) {
                 String childTableName = retrieveTableNameOrColForField(field);
                 if (jsonObject.get(field) instanceof JSONObject) {
@@ -195,10 +194,10 @@ public class FormUtils {
         return null;
     }
 
-    /*
+    /**
      * Insert the a new record to the database and returns its id,
      * on the Android client side the logic might change a little but the general idea is basically to insert and get the id
-     */
+     **/
     private Long executeInsertStatement(ContentValues values, String tableName) {
         // TODO Auto-generated method stub
         SQLiteDatabase database = mySQLiteHelper.getWritableDatabase();

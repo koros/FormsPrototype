@@ -31,11 +31,11 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
     private static final int DATABASE_VERSION = 1;
 
     // Database Name
-    private static final String DATABASE_NAME = "SampleDB";
+    private static final String DATABASE_NAME = "forms_prototype";
 
     private static final String FORMS_TABLE_NAME = "forms";
 
-    //private static final String CREATE_FORMS_TABLE_SQL = "CREATE TABLE form_submissions (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  encounter_type TEXT NOT NULL,  form_id TEXT NOT NULL, table_name TEXT NOT NULL, data_id INTEGER NOT NULL, form_data TEXT NOT NULL)";
+    //private static final String CREATE_FORMS_SUBMISSIONS_TABLE_SQL = "CREATE TABLE form_submissions (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  encounter_type TEXT NOT NULL,  form_id TEXT NOT NULL, table_name TEXT NOT NULL, data_id INTEGER NOT NULL, form_data TEXT NOT NULL)";
 
     private static final String CREATE_FORMS_TABLE_SQL = "CREATE TABLE forms (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  formVersion TEXT NOT NULL, tableName TEXT NOT NULL, formName TEXT NOT NULL, formId TEXT NULL, modelNode TEXT NOT NULL, formNode TEXT NOT NULL, formUrl TEXT NOT NULL)";
 
@@ -43,7 +43,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 
     private static final String CREATE_SYNC_TABLE_SQL = "CREATE TABLE sync_table (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, table_name TEXT NOT NULL, record_id INTEGER NOT NULL, type TEXT NOT NULL, column TEXT NULL)";
 
-    private static final String CREATE_SYNC_POINTER_TABLE_SQL = "CREATE TABLE sync_pointer (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  pointer_name TEXT NOT NULL UNIQUE,  position INTEGER NOT NULL)";
+    private static final String CREATE_SYNC_POINTER_TABLE_SQL = "CREATE TABLE sync_pointer (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, sync_time TIMESTAMP NOT NULL, position INTEGER NOT NULL)";
 
     private static final String CREATE_SYNC_TABLE_UPDATES_SQL = "CREATE TABLE sync_table_updates (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, server_id INTEGER NOT NULL, table_name TEXT NOT NULL, column_name TEXT NOT NULL, new_value TEXT NOT NULL, synced SMALLINT NOT NULL)";
 
