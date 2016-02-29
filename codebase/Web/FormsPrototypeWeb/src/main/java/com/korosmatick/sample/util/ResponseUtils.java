@@ -8,6 +8,12 @@ import com.korosmatick.sample.model.api.Response;
 
 public class ResponseUtils {
 
+	/**
+	 * Appends error messages to the response object error list
+	 * @param e
+	 * @param response
+	 * @return
+	 */
 	public static Response addErrorToResponse(Exception e, Response response){
 		List<Error> errors = response.getErrors();
 		if (errors == null) {

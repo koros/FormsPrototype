@@ -74,7 +74,7 @@ public class SyncManager {
             Gson gson = new Gson();
             String json = gson.toJson(packet);
 
-            String serviceEndpoint = "http://10.0.2.2:8080/sample/sync";//FIXME
+            String serviceEndpoint = "http://10.20.20.33:8080/sample/sync";//FIXME
 
             try {
                 RequestBody formBody = new FormEncodingBuilder()
@@ -111,7 +111,7 @@ public class SyncManager {
         Gson gson = new Gson();
         String json = gson.toJson(packet);
 
-        String serviceEndpoint = "http://10.0.2.2:8080/sample/sync";//FIXME
+        String serviceEndpoint = "http://10.20.20.33:8080/sample/sync";//FIXME
 
         try {
             RequestBody formBody = new FormEncodingBuilder()

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/security 
+                           http://www.springframework.org/schema/security/spring-security.xsd">
+	
+	<security:http auto-config="true" use-expressions="true">
+		<security:form-login login-page="/login" default-target-url="/" />
+		<security:intercept-url pattern="/rest/**" filters="none" />
+		<security:intercept-url pattern="/resources/**" filters="none" />
+		<security:intercept-url pattern="/login" filters="none" />
+		<security:intercept-url pattern="/**"  access="isAuthenticated()" />
+		<!-- <security:logout logout-success-url="/index" /> -->
+		
+		<security:logout logout-url="/logout" logout-success-url="/login"/>
+	</security:http>
+	
+	<bean id="daoAuthenticationProvider" class="org.springframework.security.authentication.dao.DaoAuthenticationProvider">
+		<property name="userDetailsService" ref="customUserDetailsService" />
+		<property name="passwordEncoder" ref="passwordEncoder" />
+	</bean>
+	
+	<bean id="customUserDetailsService" class="com.korosmatick.sample.service.security.PrototypeUserDetailsService">
+	</bean>
+	
+	<security:authentication-manager alias="authenticationManager">
+	   <security:authentication-provider user-service-ref='customUserDetailsService'>
+			<security:password-encoder ref="passwordEncoder">
+		      <security:salt-source ref="saltSource"/>
+		    </security:password-encoder>
+		</security:authentication-provider>
+		
+	</security:authentication-manager>
+	
+	<bean class="org.springframework.security.authentication.encoding.ShaPasswordEncoder" id="passwordEncoder"/>
+	
+	<bean class="org.springframework.security.authentication.dao.ReflectionSaltSource" id="saltSource">
+	  	<property name="userPropertyToUse" value="username"/>
+	</bean>
+	
+	<security:global-method-security pre-post-annotations="enabled">
+	    <security:expression-handler ref="expressionHandler"/>
+	</security:global-method-security>
+	
+	<bean id="expressionHandler" class="org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler" />
+
+</beans>

@@ -60,6 +60,7 @@
         <c:url var="rapidproWebhookTestUrl" value="/prototype/webhook" />
         <c:url var="rapidproAddContactUrl" value="/prototype/rapidpro/addContact" />
         <c:url var="rapidproContactsUrl" value="/prototype/rapidpro/contacts" />
+        <c:url var="settingsUrl" value="/prototype/settings" />
 		
 		<div id="example" class="collapse navbar-collapse">
 	      <ul class="nav navbar-nav navbar-right">
@@ -88,11 +89,12 @@
 	                </a>
 	            </li>
 	            <li>
-	                <a href="${rapidproWebhookTestUrl}"> 
+	                <a href="${settingsUrl}"> 
 	                    <i class="fa fa-pinterest"></i>
-	                    Webhook
+	                    More
 	                </a>
 	            </li>
+	            
 	            
 	       </ul>
 	      

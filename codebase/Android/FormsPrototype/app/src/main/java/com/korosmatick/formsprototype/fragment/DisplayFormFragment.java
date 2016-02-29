@@ -80,8 +80,7 @@ public class DisplayFormFragment extends Fragment {
         webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
         webView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
 
-        String databasePath = getActivity().getApplicationContext().getApplicationContext().getDir(
-                "database", Context.MODE_PRIVATE).getPath();
+        String databasePath = getActivity().getApplicationContext().getApplicationContext().getDir("database", Context.MODE_PRIVATE).getPath();
         webView.getSettings().setDatabasePath(databasePath);
 
         webView.setWebViewClient(new AppWebViewClient(progressBar));

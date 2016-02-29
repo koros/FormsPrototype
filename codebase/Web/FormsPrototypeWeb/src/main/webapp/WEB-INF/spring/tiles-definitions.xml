@@ -72,5 +72,14 @@
 		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/startFlowStatus.jsp" />
 	</definition>
 	
+	<!-- Concrete page. To use this page, your controller must return the name "settings-tiles" -->
+	<definition name="settings-tiles" extends="template-main">
+		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/settings.jsp" />
+	</definition>
+	
+	<!-- Concrete page. To use this page, your controller must return the name "viewOnaAccount-tiles" -->
+	<definition name="viewOnaAccount-tiles" extends="template-main">
+		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/viewOnaAccount.jsp" />
+	</definition>
 	
 </tiles-definitions>

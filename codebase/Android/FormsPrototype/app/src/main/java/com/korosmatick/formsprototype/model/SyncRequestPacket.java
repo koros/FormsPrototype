@@ -15,6 +15,8 @@ public class SyncRequestPacket {
 
     private Long syncPointerPosition;
 
+    private List<NewChildObjectPacket> newChildRecords;
+
     public int getType() {
         return type;
     }
@@ -45,5 +47,13 @@ public class SyncRequestPacket {
 
     public void setSyncPointerPosition(Long syncPointerPosition) {
         this.syncPointerPosition = syncPointerPosition;
+    }
+
+    public List<NewChildObjectPacket> getNewChildRecords() {
+        return newChildRecords;
+    }
+
+    public void setNewChildRecords(List<NewChildObjectPacket> newChildRecords) {
+        this.newChildRecords = newChildRecords;
     }
 }

@@ -47,6 +47,8 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 
     private static final String CREATE_SYNC_TABLE_UPDATES_SQL = "CREATE TABLE sync_table_updates (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, server_id INTEGER NOT NULL, table_name TEXT NOT NULL, column_name TEXT NOT NULL, new_value TEXT NOT NULL, synced SMALLINT NOT NULL)";
 
+    private static final String CREATE_SYNC_TABLE_NEW_CHILD_RECORDS_SQL = "CREATE TABLE new_child_records (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, parent_id INTEGER NOT NULL, child_table_name TEXT NOT NULL, synced SMALLINT NOT NULL)";
+
     static MySQLiteHelper instance;
 
     public static MySQLiteHelper getInstance(Context context){
@@ -69,6 +71,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
         db.execSQL(CREATE_SYNC_TABLE_SQL);
         db.execSQL(CREATE_SYNC_POINTER_TABLE_SQL);
         db.execSQL(CREATE_SYNC_TABLE_UPDATES_SQL);
+        db.execSQL(CREATE_SYNC_TABLE_NEW_CHILD_RECORDS_SQL);
     }
 
     @Override

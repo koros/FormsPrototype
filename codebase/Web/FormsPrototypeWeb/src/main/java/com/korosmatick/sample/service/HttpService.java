@@ -50,7 +50,7 @@ public class HttpService {
 	@Autowired
 	private DataSource dataSource;
 
-	// https://sujen.enketo.org/webform http://sujen.enketo.org/webform
+	// example urls: https://sujen.enketo.org/webform http://sujen.enketo.org/webform
 	public boolean fetchForm(Form form) {
 		try {
 			String url = form.getFormUrl();
@@ -301,9 +301,11 @@ public class HttpService {
 		return false;
 	}
 	
-	/*
-     * Create the table if it doesn't exist
-     */
+	/**
+	 * Create the table if it doesn't exist
+	 * @param createTableStmt
+	 * @throws SQLException
+	 */
     private void executeCreateTableIfNotExistStatement(final String createTableStmt) throws SQLException {
     	Connection connection = dataSource.getConnection();
     	PreparedStatement ps = connection.prepareStatement(createTableStmt);

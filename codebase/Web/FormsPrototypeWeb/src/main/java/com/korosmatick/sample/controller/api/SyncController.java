@@ -33,7 +33,7 @@ public class SyncController extends BaseController{
 	private ComboPooledDataSource dataSource;
 	
 	
-	@RequestMapping(value="/sync",method = RequestMethod.POST)
+	@RequestMapping(value="/rest/sync",method = RequestMethod.POST)
 	public @ResponseBody ResponseWrapper syncData(@RequestParam Map<String,String> allRequestParams, @RequestParam String payload) {
 		ResponseWrapper apiResponse = new ResponseWrapper();
 		try {

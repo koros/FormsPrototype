@@ -30,6 +30,13 @@ public class DBUtils {
 		return map;
 	}
 	
+	/**
+	 * Converts the specified row of the resultset into a key:value map
+	 * @param rs
+	 * @param row
+	 * @return
+	 * @throws Exception
+	 */
 	public static Map<String , String> resultSetToMap(ResultSet rs, int row) throws Exception{
 		Map<String,String> map = new HashMap<String, String>();
 		ResultSetMetaData meta = rs.getMetaData();

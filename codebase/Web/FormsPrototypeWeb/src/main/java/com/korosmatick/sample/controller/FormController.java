@@ -1,7 +1,5 @@
 package com.korosmatick.sample.controller;
 
-import java.text.DateFormat;
-import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
 
@@ -18,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import com.korosmatick.sample.dao.RequestsLogsDao;
 import com.korosmatick.sample.model.db.Form;
-import com.korosmatick.sample.model.db.RequestsLogs;
 import com.korosmatick.sample.service.FormService;
 import com.korosmatick.sample.service.HttpService;
 
