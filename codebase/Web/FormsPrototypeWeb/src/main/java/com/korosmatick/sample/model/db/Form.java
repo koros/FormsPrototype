@@ -34,6 +34,9 @@ public class Form implements Serializable {
 	@Column(nullable = false)
 	private String formUrl;
 	
+	@Column(nullable = false)
+	private String hash;
+	
 	public Long getId() {
 		return id;
 	}
@@ -96,6 +99,14 @@ public class Form implements Serializable {
 
 	public void setFormUrl(String formUrl) {
 		this.formUrl = formUrl;
+	}
+
+	public String getHash() {
+		return hash;
+	}
+
+	public void setHash(String hash) {
+		this.hash = hash;
 	}
 	
 }

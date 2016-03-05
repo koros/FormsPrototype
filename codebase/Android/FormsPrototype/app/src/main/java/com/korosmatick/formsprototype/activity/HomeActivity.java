@@ -34,7 +34,7 @@ public class HomeActivity extends AppCompatActivity {
     List<Form> items = new ArrayList<Form>();
     MySQLiteHelper mySQLiteHelper = null;
     // 10.0.2.2 - localhost address when running an emulators
-    String formsEndpoint = "http://10.20.20.33:8080/sample/rest/forms";
+    String formsEndpoint = "http://10.0.2.2:8080/sample/rest/forms";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

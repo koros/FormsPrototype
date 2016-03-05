@@ -9,12 +9,18 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import com.korosmatick.sample.dao.PrototypeUserDao;
+import com.korosmatick.sample.model.db.PrototypeUser;
+import com.korosmatick.sample.service.OnaApiService;
 
 /**
  * Handles requests for the application home page.
@@ -26,6 +32,12 @@ public class HomeController extends BaseController{
 	
 	@Autowired
 	com.korosmatick.sample.dao.FormDao formDao;
+	
+	@Autowired
+	OnaApiService onaApiService;
+	
+	@Autowired
+	PrototypeUserDao userDao;
 	
 	/**
 	 * Simply selects the home view to render by returning its name.
@@ -41,14 +53,13 @@ public class HomeController extends BaseController{
 		
 		model.addAttribute("serverTime", formattedDate );
 		
-		//create sample form 
-//		Form form = new Form();
-//		form.setFormId("123124");
-//		form.setFormName("sampel form");
-//		form.setFormUrl("http://sampleurl.com");
-//		formDao.add(form);
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+	    String name = auth.getName(); //get logged in username
+	    PrototypeUser currentUser = userDao.findUserByEmail(name);
+	    
+		onaApiService.retrieveAndSaveAllFormsForUser(currentUser.getEmail());
 		
-		return "adminHome-tiles";
+		return "redirect:" + "/prototype/forms";
 	}
 	
 	@RequestMapping(value = "/sample")

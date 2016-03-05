@@ -30,6 +30,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -122,7 +123,7 @@ public class FormsHttpService {
 
     public Form processXMLModel(String xmlModelString, Form form) {
         try {
-            xmlModelString = xmlModelString.replaceAll("\\\\/", "/").replaceAll("\\\\\"", "\"");
+            xmlModelString = xmlModelString.replaceAll("\\\\/", "/").replaceAll("\\\\\"", "\"").replaceAll("\n", "").replaceAll("\r", "").replaceAll(">\\s*<", "><");
             DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
             InputStream stream = new ByteArrayInputStream(xmlModelString.getBytes("UTF-8"));
@@ -134,12 +135,12 @@ public class FormsHttpService {
             Node instanceNode = modelNode.getFirstChild();
 
             //retrieve version and id
-            String version = retrieveAttribute(instanceNode, "version");
-            String id = retrieveAttribute(instanceNode, "id");
+            //String version = retrieveAttribute(instanceNode, "version");
+            //String id = retrieveAttribute(instanceNode, "id");
 
-            Assert.assertEquals(form.getFormId(), id);
+            //Assert.assertEquals(form.getFormId(), id);
             //form.setFormId(id);
-            Assert.assertEquals(form.getFormVersion(), version);
+            //Assert.assertEquals(form.getFormVersion(), version);
             //form.setFormVersion(version);
 
             //set the tableName
@@ -186,6 +187,12 @@ public class FormsHttpService {
     public void processNode(Node node, Node parentNode) {
         //replace all illegal xters in the table name
         String tableName = retrieveTableNameOrColForNode(node);
+
+        //keep track of the column names to strip duplicate cols
+        List<String> discoveredColumnNames = new ArrayList<String>();
+        discoveredColumnNames.add("_id");
+        discoveredColumnNames.add("_serverid");
+
         String parentName = parentNode != null ? node.getParentNode().getNodeName() : "";
         System.out.println(parentName + " : " + tableName);
 
@@ -200,6 +207,8 @@ public class FormsHttpService {
 
             // add a link to relatioship table
             createOrUpdateTableRelationshipLink(foreignIdFieldName, tableName, foreignIdFieldName, "one_to_many", foreignIdFieldName, "_id");
+
+            discoveredColumnNames.add(foreignIdFieldName);
         }
 
         NodeList nodeList = node.getChildNodes();
@@ -208,12 +217,18 @@ public class FormsHttpService {
             if (currentNode.getNodeType() == Node.ELEMENT_NODE) {
                 // calls this method for all the children which is Element
                 String colName = retrieveTableNameOrColForNode(currentNode);
+
+                // skip duplicate cols
+                if (discoveredColumnNames.contains(colName))
+                    continue;
+
                 createTableSql.append(", " + colName + " TEXT NULL");
                 String alterStmt = "alter table " + tableName + " add column " + colName + " TEXT NULL";
                 alterTableSqlStatements.put(colName, alterStmt);
                 if (hasChildElements(currentNode)) {
                     processNode(currentNode, node);
                 }
+                discoveredColumnNames.add(colName);
             }
         }
 

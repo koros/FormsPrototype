@@ -12,7 +12,9 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -67,6 +69,7 @@ public class HttpService {
 				processXMLModel(modelString, form);
 				form.setModelNode(modelString);
 				form.setFormNode(formString);
+				form.setHash("1231");
 				formService.saveForm(form);
 				return true;
 			}
@@ -128,7 +131,7 @@ public class HttpService {
 	
 	public Form processXMLModel(String xmlModelString, Form form) {
 		try {
-			xmlModelString = xmlModelString.replaceAll("\\\\/", "/").replaceAll("\\\\\"", "\"");
+			xmlModelString = xmlModelString.replaceAll("\\\\/", "/").replaceAll("\\\\\"", "\"").replaceAll("\n", "").replaceAll("\r", "").replaceAll(">\\s*<", "><");
 			DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
 			InputStream stream = new ByteArrayInputStream(xmlModelString.getBytes(StandardCharsets.UTF_8));
@@ -196,6 +199,10 @@ public class HttpService {
 		String parentName = parentNode != null ? node.getParentNode().getNodeName() : "";
 		System.out.println(parentName + " : " + tableName);
 		
+		//keep track of the column names to strip duplicate cols
+        List<String> discoveredColumnNames = new ArrayList<String>();
+        discoveredColumnNames.add("_id");
+		
 		StringBuilder createTableSql = new StringBuilder("create table if not exists " + tableName + "(_id SERIAL PRIMARY KEY");// postgres specific!!!
 		Map<String, String> alterTableSqlStatements = new HashMap<String, String>(); // alter table sql statements if necessary
 		
@@ -211,6 +218,8 @@ public class HttpService {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+            
+            discoveredColumnNames.add(foreignIdFieldName);
         }
 		
 		NodeList nodeList = node.getChildNodes();
@@ -219,13 +228,21 @@ public class HttpService {
 			if (currentNode.getNodeType() == Node.ELEMENT_NODE) {
 				// calls this method for all the children which is Element
 				String colName = retrieveTableNameOrColForNode(currentNode);
+				
+				// skip duplicate cols
+                if (discoveredColumnNames.contains(colName))
+                    continue;
+				
 				createTableSql.append(", " + colName + " VARCHAR(500) DEFAULT NULL");
 				String alterStmt = "alter table " + tableName + " add column " + colName + " VARCHAR(500) DEFAULT NULL";
 				alterTableSqlStatements.put(colName, alterStmt);
 				if (hasChildElements(currentNode)) {
 					processNode(currentNode, node);
 				}
+				
+				discoveredColumnNames.add(colName);
 			}
+			
 		}
 
 		createTableSql.append(");");
