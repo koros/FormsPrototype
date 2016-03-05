@@ -57,8 +57,10 @@ public class HomeController extends BaseController{
 	    String name = auth.getName(); //get logged in username
 	    PrototypeUser currentUser = userDao.findUserByEmail(name);
 	    
-		onaApiService.retrieveAndSaveAllFormsForUser(currentUser.getEmail());
-		
+	    if (currentUser != null) {
+	    	onaApiService.retrieveAndSaveAllFormsForUser(currentUser.getEmail());
+		}
+	    
 		return "redirect:" + "/prototype/forms";
 	}
 	

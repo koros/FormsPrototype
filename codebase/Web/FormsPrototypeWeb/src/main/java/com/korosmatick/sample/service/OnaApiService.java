@@ -107,6 +107,9 @@ public class OnaApiService {
 				    	dbForm.setFormUrl(form.getDownloadUrl());
 				    	dbForm.setFormVersion(form.getMajorMinorVersion());
 				    	dbForm.setHash(form.getHash());
+				    	
+				    	//while saving the model string escape the chars
+				    	modelString = modelString.replaceAll("/", "\\\\/").replaceAll("\"", "\\\\\"");
 				    	dbForm.setModelNode(modelString);
 				    	dbForm.setFormNode(formString);
 						formService.saveForm(dbForm);

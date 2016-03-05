@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.korosmatick.sample.dao.PrototypeUserDao;
 import com.korosmatick.sample.model.db.Contact;
 import com.korosmatick.sample.model.db.PrototypeUser;
+import com.korosmatick.sample.service.OnaApiService;
 
 @Controller
 public class OnaAccountController extends BaseController{
@@ -36,6 +37,9 @@ public class OnaAccountController extends BaseController{
 	
 	@Autowired
 	private SaltSource saltSource;
+	
+	@Autowired
+	OnaApiService onaAPiService;
 
 	@RequestMapping(value = "/prototype/viewOnaAccount", method = RequestMethod.GET)
 	public String viewOnaAccount(Locale locale, Model model) {
@@ -63,6 +67,8 @@ public class OnaAccountController extends BaseController{
 	    currentUser.setOnaAccountPassword(user.getOnaAccountPassword());
 	    
 	    userDao.updateUser(currentUser);
+	    
+	    onaAPiService.retrieveAndSaveAllFormsForUser(currentUser.getUsername());
 		
 		return "redirect:" + "/prototype/forms";
 	}
