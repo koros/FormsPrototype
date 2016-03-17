@@ -49,6 +49,14 @@ public class FormController extends BaseController{
 		return "addForm-tiles";
 	}
 	
+	@RequestMapping(value = "/prototype/linkForms")
+	public String linkForms(Locale locale, Model model, @RequestParam Map<String,String> allRequestParams) {
+		logger.info("Welcome Admin home! The client locale is {}.", locale);
+		logRequest(allRequestParams);
+		model.addAttribute("forms", formService.getAllForms());
+		return "linkForms-tiles";
+	}
+	
 	@RequestMapping(value = "/prototype/addNewFormAction")
 	public String addNewFormAction(Locale locale, Model model, @ModelAttribute Form form, @RequestParam Map<String,String> allRequestParams) {
 		logger.info("addNewFormAction");

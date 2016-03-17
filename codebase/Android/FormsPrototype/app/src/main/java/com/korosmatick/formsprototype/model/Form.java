@@ -24,6 +24,10 @@ public class Form {
 
     private String formUrl;
 
+    private String hash;
+
+    private Long parentFormId;
+
     public Long getId() {
         return id;
     }
@@ -86,5 +90,21 @@ public class Form {
 
     public void setFormUrl(String formUrl) {
         this.formUrl = formUrl;
+    }
+
+    public String getHash() {
+        return hash;
+    }
+
+    public void setHash(String hash) {
+        this.hash = hash;
+    }
+
+    public Long getParentFormId() {
+        return parentFormId;
+    }
+
+    public void setParentFormId(Long parentFormId) {
+        this.parentFormId = parentFormId;
     }
 }

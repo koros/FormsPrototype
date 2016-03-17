@@ -44,10 +44,23 @@ public class FormDaoImpl implements FormDao{
 	}
 
 	@Override
+	public Form findFormByFormId(String formId){
+		logger.debug("Find Form by formId : " + formId );
+		Session session = sessionFactory.getCurrentSession();
+		Criteria criteria = session.createCriteria(Form.class);
+		criteria.add(Restrictions.eq("formId", formId));
+		criteria.addOrder(Order.asc("id"));
+		return criteria.list().isEmpty() ? null : (Form) criteria.list().get(0);
+	}
+	
+	@Override
 	public void add(Form form) {
 		logger.debug("adding : " + form.getFormName());
-		Session session = sessionFactory.getCurrentSession();
-		session.save(form);
+		
+		if (findFormByFormId(form.getFormId()) == null) {
+			Session session = sessionFactory.getCurrentSession();
+			session.save(form);
+		}
 	}
 
 	@Override

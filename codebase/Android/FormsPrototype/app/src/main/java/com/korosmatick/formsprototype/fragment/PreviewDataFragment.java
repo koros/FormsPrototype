@@ -23,6 +23,9 @@ import com.korosmatick.formsprototype.model.Form;
 import com.korosmatick.formsprototype.util.FormBuilder;
 import com.korosmatick.formsprototype.util.SyncManager;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import butterknife.Bind;
 import butterknife.ButterKnife;
 
@@ -53,10 +56,10 @@ public class PreviewDataFragment extends Fragment implements SwipeRefreshLayout.
         View view = inflater.inflate(R.layout.preview_data_fragment, container, false);
         ButterKnife.bind(this, view);
         formBuilder = FormBuilder.getInstance(getActivity());
+        mySQLiteHelper = MySQLiteHelper.getInstance(getActivity());
 
         swipeRefreshLayout.setOnRefreshListener(this);
 
-        mySQLiteHelper = MySQLiteHelper.getInstance(getActivity());
         columnNames = mySQLiteHelper.getColumnNamesForTable(form.getTableName());
 
         //TableRow rowTitle = getTableTitleView();
@@ -108,7 +111,6 @@ public class PreviewDataFragment extends Fragment implements SwipeRefreshLayout.
         return rowTitle;
     }
 
-
     public TableRow getColumnHeaders(){
         TableRow rowDayLabels = new TableRow(getActivity());
 
@@ -150,8 +152,9 @@ public class PreviewDataFragment extends Fragment implements SwipeRefreshLayout.
                     @Override
                     public void onClick(View v) {
                         Long id = Long.valueOf(v.getTag().toString());
-                        String xml = formBuilder.buildFormSubmissionXMLString(form, id);
-                        ((FormDataActivity)getActivity()).switchToDisplayFormFragment(1, xml);
+                        //String xml = formBuilder.buildFormSubmissionXMLString(form, id);
+                        //((FormDataActivity)getActivity()).switchToDisplayFormFragment(1, xml);
+                        ((FormDataActivity)getActivity()).showOptionsDialog(id);
                     }
                 });
                 row++;

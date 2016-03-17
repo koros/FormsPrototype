@@ -82,4 +82,10 @@
 		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/viewOnaAccount.jsp" />
 	</definition>
 	
+	<!-- Concrete page. To use this page, your controller must return the name "viewOnaAccount-tiles" -->
+	<definition name="linkForms-tiles" extends="template-main">
+		<put-attribute name="primary-content" value="/WEB-INF/views/jsp/contents/linkForms.jsp" />
+	</definition>
+	
+	
 </tiles-definitions>

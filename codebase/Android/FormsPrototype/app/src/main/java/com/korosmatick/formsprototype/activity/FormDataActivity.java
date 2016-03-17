@@ -17,9 +17,15 @@ import com.korosmatick.formsprototype.R;
 import com.korosmatick.formsprototype.database.MySQLiteHelper;
 import com.korosmatick.formsprototype.fragment.DisplayFormFragment;
 import com.korosmatick.formsprototype.fragment.PreviewDataFragment;
+import com.korosmatick.formsprototype.fragment.dialog.OptionsDialog;
 import com.korosmatick.formsprototype.model.Form;
+import com.korosmatick.formsprototype.pageradapter.BaseRegisterActivityPagerAdapter;
+import com.korosmatick.formsprototype.util.FormBuilder;
 import com.korosmatick.formsprototype.util.FormUtils;
 import com.korosmatick.formsprototype.viewpager.SampleViewPager;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
@@ -37,6 +43,9 @@ public class FormDataActivity extends AppCompatActivity {
 
     private Form form;
 
+    List<Form> childForms = new ArrayList<Form>();
+    FormBuilder formBuilder;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -44,15 +53,22 @@ public class FormDataActivity extends AppCompatActivity {
         ButterKnife.bind(this);
 
         mySQLiteHelper = MySQLiteHelper.getInstance(getApplicationContext());
+        formBuilder = FormBuilder.getInstance(getApplicationContext());
 
         Bundle bundle = getIntent().getExtras();
         Long id = bundle.getLong("id");
         form = mySQLiteHelper.getFormById(id);
 
+        childForms = mySQLiteHelper.retrieveAllChildFormsForForm(form);
+        childForms.add(form); // initialize the list of posible forms with the first form
+
         setTitle(form.getFormName());
 
         // Instantiate a ViewPager and a PagerAdapter.
-        mPagerAdapter = new SampleFragmentPagerAdapter(getSupportFragmentManager());
+        Fragment fragment = new PreviewDataFragment();
+        ((PreviewDataFragment)fragment).setForm(form);
+        mPagerAdapter = new BaseRegisterActivityPagerAdapter(getSupportFragmentManager(), childForms, fragment);
+
         mPager.setOffscreenPageLimit(2); // corner case; prevent the offscreen fragments from being destroyed; it wont happen though but just in case
         mPager.setAdapter(mPagerAdapter);
         mPager.setOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
@@ -76,16 +92,32 @@ public class FormDataActivity extends AppCompatActivity {
         return true;
     }
 
+    public void showOptionsDialog(Long id) {
+        FragmentManager fm = getSupportFragmentManager();
+        OptionsDialog optionsDialog = OptionsDialog.newInstance(childForms, form, id);
+        optionsDialog.show(fm, OptionsDialog.TAG);
+    }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_add) {
-            switchToDisplayFormFragment(1, null);
+            showForm(form.getId(), null);
             return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public void showForm(Long formId, Long id){
+        Form selectedForm = mySQLiteHelper.getFormById(formId);
+        int formIndex = getIndexForFormName(selectedForm.getFormName(), childForms) + 1; // add the offset
+        String xml = null;
+        if (id != null){
+            xml = formBuilder.buildFormSubmissionXMLString(selectedForm, id);
+        }
+        switchToDisplayFormFragment(formIndex, xml);
     }
 
     public Fragment findFragmentByPosition(int position) {
@@ -134,42 +166,6 @@ public class FormDataActivity extends AppCompatActivity {
         }
     }
 
-    public class SampleFragmentPagerAdapter extends FragmentPagerAdapter {
-
-        public static final String ARG_PAGE = "page";
-
-        public SampleFragmentPagerAdapter(FragmentManager fragmentManager) {
-            super(fragmentManager);
-        }
-
-        @Override
-        public Fragment getItem(int position) {
-            Fragment fragment = null;
-            switch (position) {
-                case 0:
-                    fragment = new PreviewDataFragment();
-                    ((PreviewDataFragment)fragment).setForm(form);
-                    break;
-                case 1:
-                    fragment = new DisplayFormFragment();
-                    ((DisplayFormFragment)fragment).setForm(form);
-                    break;
-                default:
-                    break;
-            }
-
-            Bundle args = new Bundle();
-            args.putInt(ARG_PAGE, position);
-            fragment.setArguments(args);
-            return fragment;
-        }
-
-        @Override
-        public int getCount() {
-            return 2; // two items only at the moment
-        }
-    }
-
     @Override
     public void onBackPressed() {
         if (currentPage != 0){
@@ -177,6 +173,15 @@ public class FormDataActivity extends AppCompatActivity {
         }else if (currentPage == 0) {
             super.onBackPressed(); // allow back key only if we are
         }
+    }
+
+    public static int getIndexForFormName(String formName, List<Form> forms){
+        for (int i = 0; i < forms.size(); i++){
+            if (formName.equalsIgnoreCase( forms.get(i).getFormName() )){
+                return i;
+            }
+        }
+        return -1;
     }
 
 }

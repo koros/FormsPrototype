@@ -37,7 +37,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
 
     //private static final String CREATE_FORMS_SUBMISSIONS_TABLE_SQL = "CREATE TABLE form_submissions (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  encounter_type TEXT NOT NULL,  form_id TEXT NOT NULL, table_name TEXT NOT NULL, data_id INTEGER NOT NULL, form_data TEXT NOT NULL)";
 
-    private static final String CREATE_FORMS_TABLE_SQL = "CREATE TABLE forms (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  formVersion TEXT NOT NULL, tableName TEXT NOT NULL, formName TEXT NOT NULL, formId TEXT NULL, modelNode TEXT NOT NULL, formNode TEXT NOT NULL, formUrl TEXT NOT NULL)";
+    private static final String CREATE_FORMS_TABLE_SQL = "CREATE TABLE forms (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  formVersion TEXT NOT NULL, tableName TEXT NOT NULL, formName TEXT NOT NULL, formId TEXT NULL, modelNode TEXT NOT NULL, formNode TEXT NOT NULL, formUrl TEXT NOT NULL, parentFormId INTEGER NULL)";
 
     private static final String CREATE_FOREIGN_KEYS_TABLE_SQL = "CREATE TABLE entity_relationships (_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  parent_table TEXT NOT NULL,  child_table TEXT NOT NULL, field TEXT NOT NULL, kind TEXT NOT NULL, from_field TEXT NOT NULL, to_field TEXT NOT NULL)";
 
@@ -183,6 +183,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
             Long id = null;
             SQLiteDatabase db = this.getWritableDatabase();
             ContentValues values = new ContentValues();
+            values.put("_id", form.getId());
             values.put("formVersion", form.getFormVersion());
             values.put("formId", form.getFormId());
             values.put("tableName", form.getTableName());
@@ -190,12 +191,16 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
             values.put("modelNode", form.getModelNode());
             values.put("formNode", form.getFormNode());
             values.put("formUrl", form.getFormUrl());
-            if ((id = getSavedForm(form)) != null){
-                return id;
-            }else{
-                id = db.insertWithOnConflict(FORMS_TABLE_NAME, BaseColumns._ID, values, SQLiteDatabase.CONFLICT_REPLACE);
-                return id;
-            }
+            values.put("parentFormId", form.getParentFormId());
+//            if ((id = getSavedForm(form)) != null){
+//                return id;
+//            }else{
+//                id = db.insertWithOnConflict(FORMS_TABLE_NAME, BaseColumns._ID, values, SQLiteDatabase.CONFLICT_REPLACE);
+//                return id;
+//            }
+            id = db.insertWithOnConflict(FORMS_TABLE_NAME, BaseColumns._ID, values, SQLiteDatabase.CONFLICT_REPLACE);
+            return id;
+
         }catch (Exception e){
             e.printStackTrace();
             return null;
@@ -234,6 +239,36 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
                     form.setFormName(mCursor.getString(mCursor.getColumnIndex("formName")));
                     form.setModelNode(mCursor.getString(mCursor.getColumnIndex("modelNode")));
                     form.setFormUrl(mCursor.getString(mCursor.getColumnIndex("formUrl")));
+                    form.setParentFormId(mCursor.getLong(mCursor.getColumnIndex("parentFormId")));
+                    forms.add(form);
+                }while (mCursor.moveToNext());
+            }
+            return forms;
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            if (mCursor != null) mCursor.close();
+        }
+        return forms;
+    }
+
+    public List<Form> retrieveAllChildFormsForForm(Form parentForm){
+        Cursor mCursor = null;
+        List<Form> forms = new ArrayList<Form>();
+        try {
+            SQLiteDatabase db = this.getWritableDatabase();
+            mCursor = db.rawQuery("SELECT * FROM " + FORMS_TABLE_NAME + " WHERE  parentFormId =" + parentForm.getId(), null);
+            if (mCursor != null && mCursor.moveToFirst()){
+                do {
+                    Form form = new Form();
+                    form.setId(mCursor.getLong(mCursor.getColumnIndex("_id")));
+                    form.setFormVersion(mCursor.getString(mCursor.getColumnIndex("formVersion")));
+                    form.setFormId(mCursor.getString(mCursor.getColumnIndex("formId")));
+                    form.setTableName(mCursor.getString(mCursor.getColumnIndex("tableName")));
+                    form.setFormName(mCursor.getString(mCursor.getColumnIndex("formName")));
+                    form.setModelNode(mCursor.getString(mCursor.getColumnIndex("modelNode")));
+                    form.setFormUrl(mCursor.getString(mCursor.getColumnIndex("formUrl")));
+                    form.setParentFormId(mCursor.getLong(mCursor.getColumnIndex("parentFormId")));
                     forms.add(form);
                 }while (mCursor.moveToNext());
             }
@@ -254,6 +289,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
             mCursor = db.rawQuery("SELECT * FROM " + FORMS_TABLE_NAME + " where _id = '" + id + "' LIMIT 1", null);
             if (mCursor != null && mCursor.moveToFirst()){
                 form = new Form();
+                form.setId(id);
                 form.setFormVersion(mCursor.getString(mCursor.getColumnIndex("formVersion")));
                 form.setFormId(mCursor.getString(mCursor.getColumnIndex("formId")));
                 form.setTableName(mCursor.getString(mCursor.getColumnIndex("tableName")));
@@ -261,6 +297,7 @@ public class MySQLiteHelper extends SQLiteOpenHelper {
                 form.setModelNode(mCursor.getString(mCursor.getColumnIndex("modelNode")));
                 form.setFormNode(mCursor.getString(mCursor.getColumnIndex("formNode")));
                 form.setFormUrl(mCursor.getString(mCursor.getColumnIndex("formUrl")));
+                form.setParentFormId(mCursor.getLong(mCursor.getColumnIndex("parentFormId")));
             }
         }catch (Exception e){
             e.printStackTrace();

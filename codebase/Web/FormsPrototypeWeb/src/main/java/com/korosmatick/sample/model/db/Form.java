@@ -37,6 +37,8 @@ public class Form implements Serializable {
 	@Column(nullable = false)
 	private String hash;
 	
+	private Long parentFormId;
+	
 	public Long getId() {
 		return id;
 	}
@@ -108,5 +110,12 @@ public class Form implements Serializable {
 	public void setHash(String hash) {
 		this.hash = hash;
 	}
-	
+
+	public Long getParentFormId() {
+		return parentFormId;
+	}
+
+	public void setParentFormId(Long parentFormId) {
+		this.parentFormId = parentFormId;
+	}
 }

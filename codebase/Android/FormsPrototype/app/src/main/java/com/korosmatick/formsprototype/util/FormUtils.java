@@ -148,6 +148,12 @@ public class FormUtils {
                 currentValues = getTheCurrentValuesForRecord(tableName, serverId);
             }
 
+            // pad the missing content values with the values from the db for a linked/child record
+            if (jsonObject.has("_id")){
+                String recordId  = jsonObject.getString("_id");
+                values = addMissingContentValuesForRecordId(recordId, tableName, values);
+            }
+
             /*
 			 * generate the id for this record and fetch/create child records
 			 */
@@ -260,6 +266,22 @@ public class FormUtils {
         Cursor cursor = db.rawQuery(query, null);
         dbValues = mySQLiteHelper.sqliteRowToMap(cursor);
         return dbValues;
+    }
+
+    private ContentValues addMissingContentValuesForRecordId(String id, String tableName, ContentValues cv){
+        Map<String, String> dbValues = new HashMap<String, String>();
+        SQLiteDatabase db = mySQLiteHelper.getWritableDatabase();
+        String query = "SELECT  * FROM " + tableName + " WHERE _id = " + id;
+        Cursor cursor = db.rawQuery(query, null);
+        dbValues = mySQLiteHelper.sqliteRowToMap(cursor);
+
+        for (String key : dbValues.keySet()){
+            if (!cv.containsKey(key)){
+                cv.put(key, dbValues.get(key));
+            }
+        }
+
+        return cv;
     }
 
     public static boolean isArrayOfObjects(JSONArray array) throws Exception {
